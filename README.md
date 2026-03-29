@@ -1,4 +1,3 @@
-```markdown
 # FileGuard - 企业文件访问控制系统
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -182,5 +181,3 @@ AGPL v3。详见 [LICENSE](LICENSE) 文件。
 
 **FileGuard - 让每个文件都在掌控之中**
 ```
-
-你可以直接复制以上内容到 `README.md`，并根据实际技术栈（Go/Python）、仓库地址、协议等调整细节。如果需要我帮你生成部署配置文件（docker-compose.yml）或策略引擎的示例代码，也可以告诉我。
