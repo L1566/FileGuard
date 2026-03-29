@@ -1,6 +1,6 @@
 # FileGuard - 企业文件访问控制系统
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-AGPL%20V3-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/yourname/fileguard)](https://goreportcard.com/report/github.com/yourname/fileguard)
 [![Docker Pulls](https://img.shields.io/docker/pulls/yourname/fileguard)](https://hub.docker.com/r/yourname/fileguard)
 
