@@ -176,7 +176,7 @@ AGPL v3。详见 [LICENSE](LICENSE) 文件。
 
 ## 联系我们
 
-- 提交 Issue：[GitHub Issues](https://github.com/yourname/fileguard/issues)
+- 提交 Issue：[GitHub Issues](https://github.com/L1566/fileguard/issues)
 - 邮件：security@fileguard.io
 - 企业支持：提供商业版技术支持与定制开发
 
