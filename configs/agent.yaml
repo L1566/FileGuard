@@ -1,6 +1,6 @@
 service:
-  name: FileGuard-audit
-  port: 8082
+  name: FileGuard-agent
+  port: 8084
 
 log:
   level: info

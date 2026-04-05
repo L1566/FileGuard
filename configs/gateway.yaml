@@ -1,0 +1,7 @@
+service:
+  name: FileGuard-gateway
+  port: 8080
+
+log:
+  level: info   # debug, info, warn, error
+  format: text  # text or json

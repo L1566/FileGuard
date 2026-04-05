@@ -1,0 +1,7 @@
+service:
+  name: FileGuard-kms
+  port: 8083
+
+log:
+  level: info
+  format: text

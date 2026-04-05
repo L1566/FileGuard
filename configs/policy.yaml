@@ -1,0 +1,7 @@
+service:
+  name: FileGuard-policy
+  port: 8081
+
+log:
+  level: info   # debug, info, warn, error
+  format: text  # text or json
