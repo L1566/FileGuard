@@ -37,3 +37,16 @@ func Load(configFile string) (*ServiceConfig, error) {
 
 	return &cfg, nil
 }
+
+// LoadViper 返回 viper 实例供后续 unmarshal
+func LoadViper(configFile string) (*viper.Viper, error) {
+	v := viper.New()
+	v.SetConfigFile(configFile)
+	v.SetEnvPrefix("FILEGUARD")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	if err := v.ReadInConfig(); err != nil {
+		return nil, err
+	}
+	return v, nil
+}

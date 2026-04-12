@@ -5,3 +5,13 @@ service:
 log:
   level: info   # debug, info, warn, error
   format: text  # text or json
+
+storage:
+  type: local
+  root_dir: ./data  # 文件存储根目录
+
+policy:
+  rules_file: ./configs/rules.json
+
+audit:
+  log_file: ./logs/audit.log

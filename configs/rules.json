@@ -1,0 +1,22 @@
+[
+  {
+    "id": "allow_engineer_docs",
+    "effect": "allow",
+    "conditions": {
+      "user.role": "engineer",
+      "resource.path": "regex:^projects/.*"
+    }
+  },
+  {
+    "id": "allow_admin_all",
+    "effect": "allow",
+    "conditions": {
+      "user.role": "admin"
+    }
+  },
+  {
+    "id": "deny_all",
+    "effect": "deny",
+    "conditions": {}
+  }
+]
