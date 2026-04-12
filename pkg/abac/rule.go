@@ -10,9 +10,10 @@ import (
 
 // Rule 表示一条 ABAC 规则
 type Rule struct {
-	ID         string                 `json:"id"`
-	Effect     string                 `json:"effect"` // allow 或 deny
-	Conditions map[string]interface{} `json:"conditions"`
+	ID           string                 `json:"id"`
+	Effect       string                 `json:"effect"` // allow 或 deny
+	Conditions   map[string]interface{} `json:"conditions"`
+	Restrictions []string               `json:"restrictions"` // 例如 ["watermark", "no_print"]
 }
 
 // ConditionEvaluator 评估单个条件

@@ -32,5 +32,5 @@ type Environment struct {
 type Decision struct {
 	Allowed      bool     `json:"allowed"`
 	Reason       string   `json:"reason"`
-	Restrictions []string `json:"restrictions"` // 如 "no_print", "no_export"
+	Restrictions []string `json:"restrictions"` // 如 "no_print", "no_export", "watermark"
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/audit"
 	"github.com/L1566/FileGuard/pkg/logger"
 	"github.com/L1566/FileGuard/pkg/storage"
+	"github.com/L1566/FileGuard/pkg/watermark"
 	"github.com/gorilla/mux"
 
 	httputil "github.com/L1566/FileGuard/pkg/http"
@@ -95,9 +97,31 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	_ = h.audit.Log(r.Context(), event)
 
 	// 返回文件内容
+	// 在读取文件后，根据策略决定是否加水印
+	var output []byte
+	if shouldAddWatermark(decision, resource) {
+		// 仅对图片格式尝试加水印
+		if isImageFile(filePath) {
+			watermarked, err := watermark.AddTextWatermark(reader, fmt.Sprintf("%s @ %s", subject.ID, time.Now().Format("2006-01-02 15:04:05")), "jpeg")
+			if err == nil {
+				output = watermarked
+			} else {
+				logger.Warnf("Watermark failed: %v", err)
+				// fallback to original
+				output, _ = io.ReadAll(reader)
+			}
+		} else {
+			output, _ = io.ReadAll(reader)
+			// 简单文本水印
+			output = watermark.AddTextWatermarkSimple(output, subject.ID)
+		}
+	} else {
+		output, _ = io.ReadAll(reader)
+	}
 	w.Header().Set("Content-Type", detectContentType(filePath))
 	w.Header().Set("X-FileGuard-Allowed", "true")
-	io.Copy(w, reader)
+	w.Write(output)
+	// io.Copy(w, reader)
 }
 
 // PutFile 处理 PUT /file/{path:.*} (上传)
@@ -178,4 +202,20 @@ func detectContentType(filePath string) string {
 	default:
 		return "application/octet-stream"
 	}
+}
+
+// 判断是否为图像文件
+func isImageFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".jpg" || ext == ".jpeg" || ext == ".png"
+}
+
+func shouldAddWatermark(decision abac.Decision, resource abac.Resource) bool {
+	// 可根据 decision.Restrictions 或文件敏感度决定
+	for _, r := range decision.Restrictions {
+		if r == "watermark" {
+			return true
+		}
+	}
+	return resource.Sensitivity == "confidential"
 }

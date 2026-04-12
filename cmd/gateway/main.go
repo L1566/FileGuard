@@ -90,6 +90,8 @@ func main() {
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
 	r.HandleFunc("/file/{path:.*}", fileHandler.GetFile).Methods("GET")
 	r.HandleFunc("/file/{path:.*}", fileHandler.PutFile).Methods("PUT")
+	r.HandleFunc("/api/agent/event", handler.AgentEventHandler).Methods("POST")
+	r.HandleFunc("/api/agent/heartbeat", handler.AgentHeartbeatHandler).Methods("POST")
 
 	addr := fmt.Sprintf(":%d", cfg.Service.Port)
 	logger.Infof("Starting %s on %s", cfg.Service.Name, addr)

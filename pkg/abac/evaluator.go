@@ -29,9 +29,16 @@ func (e *MemoryEvaluator) Evaluate(ctx context.Context, subject Subject, resourc
 	for _, rule := range e.rules {
 		if rule.Evaluate(subject, resource, env) {
 			if rule.Effect == "allow" {
-				return Decision{Allowed: true, Reason: "matched rule " + rule.ID}, nil
+				return Decision{
+					Allowed:      true,
+					Reason:       "matched rule " + rule.ID,
+					Restrictions: rule.Restrictions,
+				}, nil
 			} else if rule.Effect == "deny" {
-				return Decision{Allowed: false, Reason: "denied by rule " + rule.ID}, nil
+				return Decision{
+					Allowed: false,
+					Reason:  "denied by rule " + rule.ID,
+				}, nil
 			}
 		}
 	}

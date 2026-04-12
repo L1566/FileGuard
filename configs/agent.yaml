@@ -3,5 +3,14 @@ service:
   port: 8084
 
 log:
-  level: info
+  level: debug  # info/debug
   format: text
+
+monitor:
+  root_dir: /tmp/fileguard_agent  # 要监控的目录
+
+gateway:
+  url: http://localhost:8080
+  heartbeat: 30s
+
+client_id: agent-hostname-01
