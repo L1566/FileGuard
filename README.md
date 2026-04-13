@@ -67,12 +67,12 @@ graph TB
 
 ### 环境要求
 - Docker & Docker Compose
-- Python 3.10+ / Go 1.20+ （根据实现语言）
+- Go 1.20+ （根据实现语言）
 - 4GB RAM，2 CPU
 
 ### 一键部署
 ```bash
-git clone https://github.com/yourname/fileguard.git
+git clone https://github.com/L1566/FileGuard.git
 cd fileguard/deploy
 docker-compose up -d
 ```
@@ -175,7 +175,7 @@ AGPL v3。详见 [LICENSE](LICENSE) 文件。
 
 ## 联系我们
 
-- 提交 Issue：[GitHub Issues](https://github.com/L1566/fileguard/issues)
+- 提交 Issue：[GitHub Issues](https://github.com/L1566/FileGuard/issues)
 - 邮件：security@fileguard.io
 - 企业支持：提供商业版技术支持与定制开发
 
