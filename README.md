@@ -1,8 +1,8 @@
 # FileGuard - 企业文件访问控制系统
 
 [![License](https://img.shields.io/badge/License-AGPL%20V3-blue.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/yourname/fileguard)](https://goreportcard.com/report/github.com/yourname/fileguard)
-[![Docker Pulls](https://img.shields.io/docker/pulls/yourname/fileguard)](https://hub.docker.com/r/yourname/fileguard)
+[![Go Report Card](https://goreportcard.com/badge/github.com/L1566/FileGuard)](https://goreportcard.com/report/github.com/L1566/FileGuard)
+[![Docker Pulls](https://img.shields.io/docker/pulls/L1566/FileGuard)](https://hub.docker.com/r/L1566/FileGuard)
 
 **FileGuard** 是一个面向企业的文件访问控制与防泄露系统，基于零信任思想，提供细粒度的权限管理、动态加密、行为审计和终端防护能力。  
 - **通用性**：适用于制造、金融、研发等任何对敏感文件有保护需求的行业  
