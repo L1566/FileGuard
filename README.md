@@ -1,8 +1,8 @@
 # FileGuard - 企业文件访问控制系统
 
 [![License](https://img.shields.io/badge/License-AGPL%20V3-blue.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/yourname/fileguard)](https://goreportcard.com/report/github.com/yourname/fileguard)
-[![Docker Pulls](https://img.shields.io/docker/pulls/yourname/fileguard)](https://hub.docker.com/r/yourname/fileguard)
+[![Go Report Card](https://goreportcard.com/badge/github.com/L1566/FileGuard)](https://goreportcard.com/report/github.com/L1566/FileGuard)
+[![Docker Pulls](https://img.shields.io/docker/pulls/L1566/FileGuard)](https://hub.docker.com/r/L1566/FileGuard)
 
 **FileGuard** 是一个面向企业的文件访问控制与防泄露系统，基于零信任思想，提供细粒度的权限管理、动态加密、行为审计和终端防护能力。  
 - **通用性**：适用于制造、金融、研发等任何对敏感文件有保护需求的行业  
@@ -67,12 +67,12 @@ graph TB
 
 ### 环境要求
 - Docker & Docker Compose
-- Python 3.10+ / Go 1.20+ （根据实现语言）
+- Go 1.20+ （根据实现语言）
 - 4GB RAM，2 CPU
 
 ### 一键部署
 ```bash
-git clone https://github.com/yourname/fileguard.git
+git clone https://github.com/L1566/FileGuard.git
 cd fileguard/deploy
 docker-compose up -d
 ```
@@ -175,7 +175,7 @@ AGPL v3。详见 [LICENSE](LICENSE) 文件。
 
 ## 联系我们
 
-- 提交 Issue：[GitHub Issues](https://github.com/L1566/fileguard/issues)
+- 提交 Issue：[GitHub Issues](https://github.com/L1566/FileGuard/issues)
 - 邮件：security@fileguard.io
 - 企业支持：提供商业版技术支持与定制开发
 
