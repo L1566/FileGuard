@@ -18,3 +18,6 @@ audit:
 
 kms:
   address: localhost:50051
+
+dlp:
+  rules_file: ./configs/dlp_rules.json

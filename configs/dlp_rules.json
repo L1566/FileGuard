@@ -1,0 +1,29 @@
+[
+  {
+    "id": "dlp_credit_card",
+    "name": "Credit Card Number",
+    "pattern": "\\b[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}\\b",
+    "is_regex": true,
+    "sensitivity": "critical",
+    "action": "block",
+    "enabled": true
+  },
+  {
+    "id": "dlp_battery_params",
+    "name": "Battery Parameters",
+    "pattern": "battery.*capacity|voltage.*range",
+    "is_regex": true,
+    "sensitivity": "high",
+    "action": "alert",
+    "enabled": true
+  },
+  {
+    "id": "dlp_confidential",
+    "name": "Confidential Keyword",
+    "pattern": "CONFIDENTIAL",
+    "is_regex": false,
+    "sensitivity": "medium",
+    "action": "alert",
+    "enabled": true
+  }
+]

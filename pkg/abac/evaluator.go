@@ -2,6 +2,7 @@ package abac
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
 
@@ -61,4 +62,47 @@ func (e *MemoryEvaluator) LoadRulesFromFile(filePath string) error {
 	}
 	e.UpdateRules(rules)
 	return nil
+}
+
+// GetRules 返回规则副本
+func (e *MemoryEvaluator) GetRules() []Rule {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	out := make([]Rule, len(e.rules))
+	copy(out, e.rules)
+	return out
+}
+
+// AddRule 添加规则
+func (e *MemoryEvaluator) AddRule(rule Rule) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.rules = append(e.rules, rule)
+	return nil
+}
+
+// UpdateRule 更新规则
+func (e *MemoryEvaluator) UpdateRule(ruleID string, rule Rule) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for i, r := range e.rules {
+		if r.ID == ruleID {
+			e.rules[i] = rule
+			return nil
+		}
+	}
+	return errors.New("rule not found")
+}
+
+// DeleteRule 删除规则
+func (e *MemoryEvaluator) DeleteRule(ruleID string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	newRules := make([]Rule, 0, len(e.rules))
+	for _, r := range e.rules {
+		if r.ID != ruleID {
+			newRules = append(newRules, r)
+		}
+	}
+	e.rules = newRules
 }

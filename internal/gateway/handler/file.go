@@ -13,6 +13,7 @@ import (
 	"github.com/L1566/FileGuard/internal/gateway/middleware"
 	"github.com/L1566/FileGuard/pkg/abac"
 	"github.com/L1566/FileGuard/pkg/audit"
+	"github.com/L1566/FileGuard/pkg/dlp"
 	"github.com/L1566/FileGuard/pkg/kms"
 	"github.com/L1566/FileGuard/pkg/logger"
 	"github.com/L1566/FileGuard/pkg/storage"
@@ -23,19 +24,21 @@ import (
 )
 
 type FileHandler struct {
-	storage   storage.Storage
-	evaluator abac.Evaluator
-	audit     audit.Logger
-	kmsClient *kms.Client
+	storage     storage.Storage
+	evaluator   abac.Evaluator
+	audit       audit.Logger
+	kmsClient   *kms.Client
+	dlpDetector *dlp.Detector
 }
 
 // NewFileHandler 修改构造函数，增加 kmsClient 参数
-func NewFileHandler(storage storage.Storage, evaluator abac.Evaluator, audit audit.Logger, kmsClient *kms.Client) *FileHandler {
+func NewFileHandler(storage storage.Storage, evaluator abac.Evaluator, audit audit.Logger, kmsClient *kms.Client, dlpDetector *dlp.Detector) *FileHandler {
 	return &FileHandler{
-		storage:   storage,
-		evaluator: evaluator,
-		audit:     audit,
-		kmsClient: kmsClient,
+		storage:     storage,
+		evaluator:   evaluator,
+		audit:       audit,
+		kmsClient:   kmsClient,
+		dlpDetector: dlpDetector,
 	}
 }
 
@@ -142,6 +145,21 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 在 GetFile 中，获得 plaintext 后
+	if h.dlpDetector != nil {
+		findings, err := h.dlpDetector.Detect(r.Context(), plaintext)
+		if err == nil {
+			for _, f := range findings {
+				if f.Sensitivity == "critical" && f.Action != "block" {
+					// 强制添加水印（即使原策略未要求）
+					decision.Restrictions = append(decision.Restrictions, "watermark")
+					logger.Infof("DLP forced watermark on %s due to rule %s", filePath, f.RuleName)
+				}
+				// 记录 DLP 命中到审计
+			}
+		}
+	}
+
 	// 应用水印（如果策略要求）
 	output := plaintext
 	if shouldAddWatermark(decision, resource) {
@@ -204,6 +222,26 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 在 PutFile 中，读取请求体 plaintext 之后，加密之前
+	if h.dlpDetector != nil {
+		findings, err := h.dlpDetector.Detect(r.Context(), plaintext)
+		if err != nil {
+			logger.Errorf("DLP detection error: %v", err)
+		} else {
+			for _, f := range findings {
+				if f.Action == "block" {
+					httputil.Error(w, http.StatusForbidden, fmt.Sprintf("DLP blocked: %s", f.RuleName))
+					return
+				}
+				if f.Action == "alert" {
+					logger.Warnf("DLP alert: %s matched by %s", filePath, f.RuleName)
+					// 记录到审计
+					event.Details = map[string]interface{}{"dlp": f}
+				}
+			}
+		}
+	}
+
 	// 调用 KMS 加密
 	ciphertext, keyID, err := h.kmsClient.Encrypt(r.Context(), plaintext)
 	if err != nil {
@@ -264,12 +302,6 @@ func detectContentType(filePath string) string {
 	default:
 		return "application/octet-stream"
 	}
-}
-
-// 判断是否为图像文件
-func isImageFile(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
-	return ext == ".jpg" || ext == ".jpeg" || ext == ".png"
 }
 
 // 辅助函数：判断是否添加水印

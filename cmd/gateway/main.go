@@ -10,6 +10,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/abac"
 	"github.com/L1566/FileGuard/pkg/audit"
 	"github.com/L1566/FileGuard/pkg/config"
+	"github.com/L1566/FileGuard/pkg/dlp"
 	"github.com/L1566/FileGuard/pkg/kms"
 	"github.com/L1566/FileGuard/pkg/logger"
 	"github.com/L1566/FileGuard/pkg/storage"
@@ -35,9 +36,12 @@ type GatewayConfig struct {
 	Audit struct {
 		LogFile string `mapstructure:"log_file"`
 	} `mapstructure:"audit"`
-	Kms struct {
+	KMS struct {
 		Address string `mapstructure:"address"`
 	} `mapstructure:"kms"`
+	DLP struct {
+		RulesFile string `mapstructure:"rules_file"`
+	} `mapstructure:"dlp"`
 }
 
 func main() {
@@ -70,6 +74,13 @@ func main() {
 		logger.Fatalf("Unsupported storage type: %s", cfg.Storage.Type)
 	}
 
+	// 初始化 DLP 规则集和检测器
+	dlpRuleSet := dlp.NewRuleSet()
+	if err := dlpRuleSet.LoadFromFile(cfg.DLP.RulesFile); err != nil {
+		logger.Warnf("Failed to load DLP rules: %v", err)
+	}
+	dlpDetector := dlp.NewDetector(dlpRuleSet)
+
 	// 初始化 ABAC 评估器
 	rules, err := abac.LoadRulesFromFile(cfg.Policy.RulesFile)
 	if err != nil {
@@ -77,6 +88,11 @@ func main() {
 		rules = []abac.Rule{}
 	}
 	evaluator := abac.NewMemoryEvaluator(rules)
+
+	// 启动规则热加载
+	if err := abac.WatchRuleFile(evaluator, cfg.Policy.RulesFile); err != nil {
+		logger.Warnf("Failed to start rule watcher: %v", err)
+	}
 
 	// 初始化审计日志
 	auditLogger, err := audit.NewFileLogger(cfg.Audit.LogFile)
@@ -91,19 +107,26 @@ func main() {
 	r.Use(middleware.AuthMiddleware)
 
 	// 初始化 KMS 客户端
-	kmsClient, err := kms.NewClient(cfg.Kms.Address)
+	kmsClient, err := kms.NewClient(cfg.KMS.Address)
 	if err != nil {
 		logger.Fatal("Failed to connect to KMS: ", err)
 	}
 	defer kmsClient.Close()
 
 	// 创建文件处理器时传入 kmsClient
-	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient)
+	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient, dlpDetector)
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
 	r.HandleFunc("/file/{path:.*}", fileHandler.GetFile).Methods("GET")
 	r.HandleFunc("/file/{path:.*}", fileHandler.PutFile).Methods("PUT")
 	r.HandleFunc("/api/agent/event", handler.AgentEventHandler).Methods("POST")
 	r.HandleFunc("/api/agent/heartbeat", handler.AgentHeartbeatHandler).Methods("POST")
+
+	// 创建策略 API
+	policyAPI := handler.NewPolicyAPI(evaluator)
+	r.HandleFunc("/api/policy/rules", policyAPI.GetRules).Methods("GET")
+	r.HandleFunc("/api/policy/rules", policyAPI.AddRule).Methods("POST")
+	r.HandleFunc("/api/policy/rules/{id}", policyAPI.UpdateRule).Methods("PUT")
+	r.HandleFunc("/api/policy/rules/{id}", policyAPI.DeleteRule).Methods("DELETE")
 
 	addr := fmt.Sprintf(":%d", cfg.Service.Port)
 	logger.Infof("Starting %s on %s", cfg.Service.Name, addr)
