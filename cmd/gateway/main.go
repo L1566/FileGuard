@@ -10,6 +10,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/abac"
 	"github.com/L1566/FileGuard/pkg/audit"
 	"github.com/L1566/FileGuard/pkg/config"
+	"github.com/L1566/FileGuard/pkg/kms"
 	"github.com/L1566/FileGuard/pkg/logger"
 	"github.com/L1566/FileGuard/pkg/storage"
 	"github.com/gorilla/mux"
@@ -34,6 +35,9 @@ type GatewayConfig struct {
 	Audit struct {
 		LogFile string `mapstructure:"log_file"`
 	} `mapstructure:"audit"`
+	Kms struct {
+		Address string `mapstructure:"address"`
+	} `mapstructure:"kms"`
 }
 
 func main() {
@@ -86,7 +90,15 @@ func main() {
 	r.Use(middleware.Logging)
 	r.Use(middleware.AuthMiddleware)
 
-	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger)
+	// 初始化 KMS 客户端
+	kmsClient, err := kms.NewClient(cfg.Kms.Address)
+	if err != nil {
+		logger.Fatal("Failed to connect to KMS: ", err)
+	}
+	defer kmsClient.Close()
+
+	// 创建文件处理器时传入 kmsClient
+	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient)
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
 	r.HandleFunc("/file/{path:.*}", fileHandler.GetFile).Methods("GET")
 	r.HandleFunc("/file/{path:.*}", fileHandler.PutFile).Methods("PUT")

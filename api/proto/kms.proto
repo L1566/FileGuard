@@ -1,0 +1,55 @@
+syntax = "proto3";
+option go_package = "./;kms";
+package kms;
+
+service KeyManagementService {
+  rpc GenerateKey (GenerateKeyRequest) returns (GenerateKeyResponse);
+  rpc Encrypt (EncryptRequest) returns (EncryptResponse);
+  rpc Decrypt (DecryptRequest) returns (DecryptResponse);
+  rpc RotateKey (RotateKeyRequest) returns (RotateKeyResponse);
+  rpc RevokeKey (RevokeKeyRequest) returns (RevokeKeyResponse);
+}
+
+message GenerateKeyRequest {
+  string algorithm = 1; // "AES256" or "RSA"
+  int32 size = 2;
+}
+
+message GenerateKeyResponse {
+  string key_id = 1;
+  string key_material = 2; // Base64 for symmetric, PEM for asymmetric
+}
+
+message EncryptRequest {
+  string key_id = 1;
+  bytes plaintext = 2;
+}
+
+message EncryptResponse {
+  string ciphertext = 1; // Base64
+}
+
+message DecryptRequest {
+  string key_id = 1;
+  string ciphertext = 2; // Base64
+}
+
+message DecryptResponse {
+  bytes plaintext = 1;
+}
+
+message RotateKeyRequest {
+  string key_id = 1;
+}
+
+message RotateKeyResponse {
+  string new_key_id = 1;
+}
+
+message RevokeKeyRequest {
+  string key_id = 1;
+}
+
+message RevokeKeyResponse {
+  bool success = 1;
+}

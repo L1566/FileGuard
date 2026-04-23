@@ -15,3 +15,6 @@ policy:
 
 audit:
   log_file: ./logs/audit.log
+
+kms:
+  address: localhost:50051

@@ -3,32 +3,62 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/L1566/FileGuard/internal/kms/handler" // 需要创建对应目录和文件
+	pb "github.com/L1566/FileGuard/api/proto"
+	"github.com/L1566/FileGuard/internal/kms/server"
 	"github.com/L1566/FileGuard/pkg/config"
 	"github.com/L1566/FileGuard/pkg/logger"
-	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
 )
+
+type KMSConfig struct {
+	Service struct {
+		Name string `mapstructure:"name"`
+		Port int    `mapstructure:"port"`
+	} `mapstructure:"service"`
+	Log struct {
+		Level  string `mapstructure:"level"`
+		Format string `mapstructure:"format"`
+	} `mapstructure:"log"`
+}
 
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "configs/kms.yaml", "config file path")
 	flag.Parse()
 
-	cfg, err := config.Load(configPath)
+	v, err := config.LoadViper(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
 	}
-
+	var cfg KMSConfig
+	if err := v.Unmarshal(&cfg); err != nil {
+		logger.Fatal("Failed to parse config: ", err)
+	}
 	logger.Init(cfg.Log.Level, cfg.Log.Format)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
-
-	addr := fmt.Sprintf(":%d", cfg.Service.Port)
-	logger.Infof("Starting %s on %s", cfg.Service.Name, addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
-		logger.Fatal("Server failed: ", err)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Service.Port))
+	if err != nil {
+		logger.Fatal("Failed to listen: ", err)
 	}
+	s := grpc.NewServer()
+	pb.RegisterKeyManagementServiceServer(s, server.NewKMSServer())
+
+	logger.Infof("KMS server listening on port %d", cfg.Service.Port)
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve: ", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Info("Shutting down KMS...")
+	s.GracefulStop()
 }
