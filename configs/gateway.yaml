@@ -2,6 +2,11 @@ service:
   name: FileGuard-gateway
   port: 8080
 
+jwt:
+  secret_key: "your-256-bit-secret-key-change-in-production"
+  issuer: "FileGuard"
+  expiry: 24h
+
 log:
   level: info   # debug, info, warn, error
   format: text  # text or json

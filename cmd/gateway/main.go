@@ -4,11 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/L1566/FileGuard/internal/auth"
 	"github.com/L1566/FileGuard/internal/gateway/handler"
 	"github.com/L1566/FileGuard/internal/gateway/middleware"
 	"github.com/L1566/FileGuard/pkg/abac"
 	"github.com/L1566/FileGuard/pkg/audit"
+	pkg_auth "github.com/L1566/FileGuard/pkg/auth"
 	"github.com/L1566/FileGuard/pkg/config"
 	"github.com/L1566/FileGuard/pkg/dlp"
 	"github.com/L1566/FileGuard/pkg/kms"
@@ -42,6 +45,11 @@ type GatewayConfig struct {
 	DLP struct {
 		RulesFile string `mapstructure:"rules_file"`
 	} `mapstructure:"dlp"`
+	JWT struct {
+		SecretKey string        `mapstructure:"secret_key"`
+		Issuer    string        `mapstructure:"issuer"`
+		Expiry    time.Duration `mapstructure:"expiry"`
+	} `mapstructure:"jwt"`
 }
 
 func main() {
@@ -113,20 +121,42 @@ func main() {
 	}
 	defer kmsClient.Close()
 
-	// 创建文件处理器时传入 kmsClient
-	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient, dlpDetector)
-	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
-	r.HandleFunc("/file/{path:.*}", fileHandler.GetFile).Methods("GET")
-	r.HandleFunc("/file/{path:.*}", fileHandler.PutFile).Methods("PUT")
-	r.HandleFunc("/api/agent/event", handler.AgentEventHandler).Methods("POST")
-	r.HandleFunc("/api/agent/heartbeat", handler.AgentHeartbeatHandler).Methods("POST")
+	// 初始化JWT
+	jwtMgr := pkg_auth.NewJWTManager(cfg.JWT.SecretKey, cfg.JWT.Issuer, cfg.JWT.Expiry)
+	userStore := auth.NewUserStore()
+	authHandler := handler.NewAuthHandler(userStore, jwtMgr, cfg.JWT.Issuer)
 
-	// 创建策略 API
+	// 创建文件处理器
+	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient, dlpDetector)
+
+	// ========== 公开路由（无需 JWT） ==========
+	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
+	r.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
+
+	// ========== 需要 JWT 验证的 API 路由 ==========
+	apiProtected := r.PathPrefix("/api").Subrouter()
+	apiProtected.Use(middleware.JWTAuthMiddleware(jwtMgr))
+
+	// 认证相关（需 JWT）
+	apiProtected.HandleFunc("/auth/setup-mfa", authHandler.SetupMFA).Methods("POST")
+	apiProtected.HandleFunc("/auth/verify-mfa", authHandler.VerifyMFA).Methods("POST")
+
+	// Agent 相关
+	apiProtected.HandleFunc("/agent/event", handler.AgentEventHandler).Methods("POST")
+	apiProtected.HandleFunc("/agent/heartbeat", handler.AgentHeartbeatHandler).Methods("POST")
+
+	// 策略管理 API
 	policyAPI := handler.NewPolicyAPI(evaluator)
-	r.HandleFunc("/api/policy/rules", policyAPI.GetRules).Methods("GET")
-	r.HandleFunc("/api/policy/rules", policyAPI.AddRule).Methods("POST")
-	r.HandleFunc("/api/policy/rules/{id}", policyAPI.UpdateRule).Methods("PUT")
-	r.HandleFunc("/api/policy/rules/{id}", policyAPI.DeleteRule).Methods("DELETE")
+	apiProtected.HandleFunc("/policy/rules", policyAPI.GetRules).Methods("GET")
+	apiProtected.HandleFunc("/policy/rules", policyAPI.AddRule).Methods("POST")
+	apiProtected.HandleFunc("/policy/rules/{id}", policyAPI.UpdateRule).Methods("PUT")
+	apiProtected.HandleFunc("/policy/rules/{id}", policyAPI.DeleteRule).Methods("DELETE")
+
+	// ========== 文件访问路由（需 JWT） ==========
+	fileProtected := r.PathPrefix("/file").Subrouter()
+	fileProtected.Use(middleware.JWTAuthMiddleware(jwtMgr))
+	fileProtected.HandleFunc("/{path:.*}", fileHandler.GetFile).Methods("GET")
+	fileProtected.HandleFunc("/{path:.*}", fileHandler.PutFile).Methods("PUT")
 
 	addr := fmt.Sprintf(":%d", cfg.Service.Port)
 	logger.Infof("Starting %s on %s", cfg.Service.Name, addr)

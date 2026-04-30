@@ -51,7 +51,18 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject := middleware.GetSubject(r.Context())
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		httputil.Error(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	subject := abac.Subject{
+		ID:      claims.UserID,
+		Type:    "user",
+		Role:    claims.Role,
+		Project: claims.Project,
+	}
+
 	env := buildEnvironment(r)
 	resource := abac.Resource{
 		Type:        "file",
@@ -184,7 +195,18 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subject := middleware.GetSubject(r.Context())
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		httputil.Error(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	subject := abac.Subject{
+		ID:      claims.UserID,
+		Type:    "user",
+		Role:    claims.Role,
+		Project: claims.Project,
+	}
+
 	env := buildEnvironment(r)
 	resource := abac.Resource{
 		Type: "file",
