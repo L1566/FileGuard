@@ -29,3 +29,11 @@ dlp:
 
 watermark:
   font_path: ./fonts/1_Minecraft-Regular.otf  # 水印字体文件路径
+
+risk:
+  enabled: true
+  mode: shadow            # shadow | monitor | active
+  service_url: http://localhost:8090
+  cache_ttl: 5m
+  timeout: 500ms
+  fallback: allow         # allow | deny | abac_only

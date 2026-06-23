@@ -77,6 +77,37 @@ type GatewaySettings struct {
 	Heartbeat time.Duration `mapstructure:"heartbeat"` // e.g. 30s
 }
 
+// RiskSettings 风险评分设置（Gateway 侧）
+type RiskSettings struct {
+	Enabled    bool          `mapstructure:"enabled"`
+	Mode       string        `mapstructure:"mode"`        // shadow | monitor | active
+	ServiceURL string        `mapstructure:"service_url"` // e.g. http://localhost:8090
+	CacheTTL   time.Duration `mapstructure:"cache_ttl"`   // e.g. 5m
+	Timeout    time.Duration `mapstructure:"timeout"`     // e.g. 500ms
+	Fallback   string        `mapstructure:"fallback"`    // allow | deny | abac_only
+}
+
+// RiskServiceConfig Risk Service 自身配置
+type RiskServiceConfig struct {
+	Service ServiceSettings `mapstructure:"service"`
+	Log     LogSettings     `mapstructure:"log"`
+	LLM     LLMSettings     `mapstructure:"llm"`
+	Cache   CacheSettings   `mapstructure:"cache"`
+}
+
+type LLMSettings struct {
+	Provider   string        `mapstructure:"provider"`
+	Model      string        `mapstructure:"model"`
+	APIKeyEnv  string        `mapstructure:"api_key_env"`
+	Timeout    time.Duration `mapstructure:"timeout"`
+	MaxRetries int           `mapstructure:"max_retries"`
+}
+
+type CacheSettings struct {
+	MaxEntries int           `mapstructure:"max_entries"`
+	TTL        time.Duration `mapstructure:"ttl"`
+}
+
 // =============================================================================
 // 各服务完整配置类型
 // =============================================================================
@@ -105,6 +136,7 @@ type GatewayConfig struct {
 	KMS       KMSSettings       `mapstructure:"kms"`
 	DLP       DLPSettings       `mapstructure:"dlp"`
 	Watermark WatermarkSettings `mapstructure:"watermark"`
+		Risk      RiskSettings      `mapstructure:"risk"`
 }
 
 // AgentConfig 终端代理配置
@@ -166,6 +198,19 @@ func LoadGateway(configFile string) (*GatewayConfig, error) {
 		return nil, err
 	}
 	var cfg GatewayConfig
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// LoadRiskService 加载 Risk Service 配置
+func LoadRiskService(configFile string) (*RiskServiceConfig, error) {
+	v, err := newViper(configFile)
+	if err != nil {
+		return nil, err
+	}
+	var cfg RiskServiceConfig
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}

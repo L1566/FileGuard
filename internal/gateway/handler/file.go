@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/dlp"
 	"github.com/L1566/FileGuard/pkg/kms"
 	"github.com/L1566/FileGuard/pkg/logger"
+	"github.com/L1566/FileGuard/pkg/risk"
 	"github.com/L1566/FileGuard/pkg/storage"
 	"github.com/L1566/FileGuard/pkg/watermark"
 	"github.com/gorilla/mux"
@@ -29,16 +31,18 @@ type FileHandler struct {
 	audit       audit.Logger
 	kmsClient   *kms.Client
 	dlpDetector *dlp.Detector
+	riskClient  *risk.Client
 }
 
 // NewFileHandler 修改构造函数，增加 kmsClient 参数
-func NewFileHandler(storage storage.Storage, evaluator abac.Evaluator, audit audit.Logger, kmsClient *kms.Client, dlpDetector *dlp.Detector) *FileHandler {
+func NewFileHandler(storage storage.Storage, evaluator abac.Evaluator, audit audit.Logger, kmsClient *kms.Client, dlpDetector *dlp.Detector, riskClient *risk.Client) *FileHandler {
 	return &FileHandler{
 		storage:     storage,
 		evaluator:   evaluator,
 		audit:       audit,
 		kmsClient:   kmsClient,
 		dlpDetector: dlpDetector,
+		riskClient:  riskClient,
 	}
 }
 
@@ -94,6 +98,27 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		_ = h.audit.Log(r.Context(), event)
 		httputil.Error(w, http.StatusForbidden, decision.Reason)
 		return
+	}
+
+	// 风险评分（ABAC 通过后）
+	if h.riskClient != nil {
+		riskResp := h.evaluateRisk(r.Context(), subject, resource, env)
+		if riskResp != nil {
+			switch riskResp.RiskAction() {
+			case "deny":
+				httputil.Error(w, http.StatusForbidden, "risk score too high: "+riskResp.Reason)
+				return
+			case "mfa":
+				logger.Infof("Risk MFA recommended for %s: score=%.2f", filePath, riskResp.RiskScore)
+			case "approval":
+				logger.Infof("Risk approval required for %s: score=%.2f", filePath, riskResp.RiskScore)
+			}
+			event.Details = map[string]interface{}{
+				"risk_score":          riskResp.RiskScore,
+				"risk_level":          riskResp.RiskLevel,
+				"risk_recommendation": riskResp.Recommendation,
+			}
+		}
 	}
 
 	// 从存储读取文件（此时是密文）
@@ -238,6 +263,27 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 风险评分（ABAC 通过后）
+	if h.riskClient != nil {
+		riskResp := h.evaluateRisk(r.Context(), subject, resource, env)
+		if riskResp != nil {
+			switch riskResp.RiskAction() {
+			case "deny":
+				httputil.Error(w, http.StatusForbidden, "risk score too high: "+riskResp.Reason)
+				return
+			case "mfa":
+				logger.Infof("Risk MFA recommended for %s: score=%.2f", filePath, riskResp.RiskScore)
+			case "approval":
+				logger.Infof("Risk approval required for %s: score=%.2f", filePath, riskResp.RiskScore)
+			}
+			event.Details = map[string]interface{}{
+				"risk_score":          riskResp.RiskScore,
+				"risk_level":          riskResp.RiskLevel,
+				"risk_recommendation": riskResp.Recommendation,
+			}
+		}
+	}
+
 	// 读取请求体（原始明文）
 	plaintext, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -303,6 +349,45 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 
 	_ = h.audit.Log(r.Context(), event)
 	httputil.Success(w, map[string]string{"message": "uploaded"})
+}
+
+func (h *FileHandler) evaluateRisk(ctx context.Context, subject abac.Subject, resource abac.Resource, env abac.Environment) *risk.EvaluateResponse {
+	if h.riskClient == nil {
+		return nil
+	}
+
+	req := &risk.EvaluateRequest{
+		RequestID: fmt.Sprintf("%d", time.Now().UnixNano()),
+		Subject: risk.SubjectContext{
+			ID:      subject.ID,
+			Role:    subject.Role,
+			Project: subject.Project,
+		},
+		Resource: risk.ResourceContext{
+			Path:        resource.Path,
+			Sensitivity: resource.Sensitivity,
+		},
+		Environment: risk.EnvironmentContext{
+			Time: env.Time,
+			IP:   env.IP,
+		},
+		Context: risk.RiskContext{
+			IsWorkHours:     isWorkHours(),
+			IsKnownLocation: false,
+		},
+	}
+
+	resp, err := h.riskClient.Evaluate(ctx, req)
+	if err != nil {
+		logger.Warnf("Risk evaluation failed, falling back to ABAC: %v", err)
+		return nil
+	}
+	return resp
+}
+
+func isWorkHours() bool {
+	h := time.Now().Hour()
+	return h >= 9 && h < 18
 }
 
 // 辅助函数

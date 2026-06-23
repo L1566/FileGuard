@@ -1,0 +1,18 @@
+service:
+  name: FileGuard-riskservice
+  port: 8090
+
+log:
+  level: info
+  format: text
+
+llm:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  api_key_env: FILEGUARD_LLM_API_KEY
+  timeout: 10s
+  max_retries: 2
+
+cache:
+  max_entries: 10000
+  ttl: 5m

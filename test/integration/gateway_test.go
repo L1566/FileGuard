@@ -66,7 +66,7 @@ func newTestHarness(t *testing.T) *testHarness {
 	authHandler := handler.NewAuthHandler(userStore, jwtMgr, "FileGuard-Test")
 
 	// 文件处理器（无 KMS 客户端——使用直接加密）
-	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, nil, nil)
+	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, nil, nil, nil)
 
 	// 路由
 	r := mux.NewRouter()
