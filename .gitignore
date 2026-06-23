@@ -49,4 +49,6 @@ hs_err_pid*
 replay_pid*
 
 
-data/
+docs/*
+.superpowers
+data/projects
