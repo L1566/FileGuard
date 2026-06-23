@@ -15,6 +15,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/dlp"
 	"github.com/L1566/FileGuard/pkg/kms"
 	"github.com/L1566/FileGuard/pkg/logger"
+	"github.com/L1566/FileGuard/pkg/risk"
 	"github.com/L1566/FileGuard/pkg/storage"
 	"github.com/L1566/FileGuard/pkg/watermark"
 	"github.com/gorilla/mux"
@@ -88,13 +89,19 @@ func main() {
 	}
 	defer kmsClient.Close()
 
+	// 初始化 Risk 客户端
+	var riskClient *risk.Client
+	if cfg.Risk.Enabled {
+		riskClient = risk.NewClient(cfg.Risk.ServiceURL, cfg.Risk.Timeout)
+	}
+
 	// 初始化JWT
 	jwtMgr := pkgauth.NewJWTManager(cfg.JWT.SecretKey, cfg.JWT.Issuer, cfg.JWT.Expiry)
 	userStore := auth.NewUserStore()
 	authHandler := handler.NewAuthHandler(userStore, jwtMgr, cfg.JWT.Issuer)
 
 	// 创建文件处理器
-	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient, dlpDetector)
+	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient, dlpDetector, riskClient)
 
 	// ========== 公开路由（无需 JWT） ==========
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
