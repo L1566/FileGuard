@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -48,6 +49,8 @@ func NewScorer(cfg ScorerConfig) (*Scorer, error) {
 	apiKey := os.Getenv(cfg.APIKeyEnv)
 	if apiKey == "" {
 		logger.Warnf("LLM API key env %s not set, risk scoring will use defaults", cfg.APIKeyEnv)
+	} else if !strings.HasPrefix(apiKey, "sk-ant-api03-") && !strings.HasPrefix(apiKey, "sk-ant-") {
+		logger.Warnf("LLM API key does not look like an Anthropic key (expected sk-ant-...), got prefix: %s... — API calls will likely fail. Get a key at https://console.anthropic.com/", apiKey[:15])
 	}
 	return &Scorer{
 		model:  cfg.Model,
