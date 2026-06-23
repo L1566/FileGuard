@@ -1,0 +1,22 @@
+CONFIDENTIAL - TopSecret
+
+## 供应商付款与电池配方综合报告
+
+项目: APOLLO-NUCLEUS 联合项目
+密级: TopSecret / CONFIDENTIAL
+
+### 1. 付款授权
+请使用以下信用卡完成供应商付款:
+  卡号: 5412-3456-7890-1234
+  持卡人: 采购部总监
+  有效期: 12/28
+  本次支付金额: ¥2,350,000.00
+
+### 2. 电池系统技术参数
+新一代固态 battery 系统已完成验证，实测 capacity 达到 120kWh，
+在宽 voltage 工作 range（300V~450V）内保持稳定输出。
+此技术指标属 TopSecret 级别，需严格保密。
+
+### 3. 特别说明
+本文件包含 CONFIDENTIAL 级别的付款信息与 TopSecret 级别的电池技术参数，
+任何未授权访问将被视为严重安全事件。

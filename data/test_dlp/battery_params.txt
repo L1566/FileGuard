@@ -1,0 +1,33 @@
+# 电池模组技术规格书
+
+## 项目: EV-BATTERY-PROTO-2026
+
+### 电芯参数 (Cell Parameters)
+- 单体电池型号: NMC-18650-3200
+- 标称电压 (Nominal Voltage): 3.65V
+- 标称容量 (Nominal Capacity): 3200mAh
+- 电池化学成分: LiNiMnCoO2
+- battery pack total capacity: 96kWh（按 96S2P 配置计算）
+
+### 模组参数 (Module Specs)
+- 模组配置: 12S2P
+- 工作电压范围 (Operating Voltage Range): 36.0V ~ 50.4V
+- 模组容量: 6.4kWh
+- 重量: 18.5kg
+- 尺寸 (L×W×H): 680 × 320 × 140 mm
+
+### 热管理
+- 冷却方式: 液冷
+- 工作温度 range: -20°C ~ 55°C
+- 推荐工作温度: 25°C ± 5°C
+
+### 安全参数
+- 过充保护电压: 4.25V/cell
+- 过放保护电压: 2.75V/cell
+- 短路保护响应: <10ms
+- 热失控触发温度: >160°C
+
+编制: 电池研发部
+审核: ________________
+日期: 2026-06-23
+密级: 内部
