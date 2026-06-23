@@ -1,0 +1,112 @@
+syntax = "proto3";
+option go_package = "./;policy";
+package policy;
+
+// PolicyService 策略管理服务
+// 计划：集中管理 ABAC 规则，支持热加载推送至网关
+service PolicyService {
+  // Evaluate 评估一次访问请求
+  rpc Evaluate (EvaluateRequest) returns (EvaluateResponse);
+  // GetRules 获取所有规则
+  rpc GetRules (GetRulesRequest) returns (GetRulesResponse);
+  // AddRule 添加规则
+  rpc AddRule (AddRuleRequest) returns (AddRuleResponse);
+  // UpdateRule 更新规则
+  rpc UpdateRule (UpdateRuleRequest) returns (UpdateRuleResponse);
+  // DeleteRule 删除规则
+  rpc DeleteRule (DeleteRuleRequest) returns (DeleteRuleResponse);
+  // Watch 监听规则变更（流式推送至网关）
+  rpc Watch (WatchRequest) returns (stream RuleUpdate);
+}
+
+message Subject {
+  string id = 1;
+  string type = 2;       // user, device, service
+  string role = 3;
+  string project = 4;
+  map<string, string> attributes = 5;
+}
+
+message Resource {
+  string id = 1;
+  string type = 2;       // file, folder
+  string path = 3;
+  string sensitivity = 4;
+  repeated string tags = 5;
+  map<string, string> attributes = 6;
+}
+
+message Environment {
+  string time = 1;
+  string ip = 2;
+  string device_id = 3;
+  string os = 4;
+  map<string, string> attributes = 5;
+}
+
+message Rule {
+  string id = 1;
+  string effect = 2;          // allow, deny
+  map<string, string> conditions = 3;  // e.g. "user.role" -> "engineer"
+  repeated string restrictions = 4;    // watermark, no_print, no_export
+}
+
+message Decision {
+  bool allowed = 1;
+  string reason = 2;
+  repeated string restrictions = 3;
+}
+
+message EvaluateRequest {
+  Subject subject = 1;
+  Resource resource = 2;
+  Environment environment = 3;
+}
+
+message EvaluateResponse {
+  Decision decision = 1;
+}
+
+message GetRulesRequest {}
+
+message GetRulesResponse {
+  repeated Rule rules = 1;
+}
+
+message AddRuleRequest {
+  Rule rule = 1;
+}
+
+message AddRuleResponse {
+  bool success = 1;
+  string rule_id = 2;
+}
+
+message UpdateRuleRequest {
+  string rule_id = 1;
+  Rule rule = 2;
+}
+
+message UpdateRuleResponse {
+  bool success = 1;
+}
+
+message DeleteRuleRequest {
+  string rule_id = 1;
+}
+
+message DeleteRuleResponse {
+  bool success = 1;
+}
+
+message WatchRequest {}
+
+message RuleUpdate {
+  enum Action {
+    ADDED = 0;
+    UPDATED = 1;
+    DELETED = 2;
+  }
+  Action action = 1;
+  Rule rule = 2;
+}

@@ -1,0 +1,59 @@
+syntax = "proto3";
+option go_package = "./;audit";
+package audit;
+
+import "google/protobuf/timestamp.proto";
+
+// AuditService 审计日志服务
+// 计划：网关将审计事件推送至此服务，由审计服务统一持久化和查询
+service AuditService {
+  // Log 记录一条审计事件
+  rpc Log (LogRequest) returns (LogResponse);
+  // Query 按条件查询审计事件
+  rpc Query (QueryRequest) returns (QueryResponse);
+  // StreamLog 流式接收审计事件（高性能场景）
+  rpc StreamLog (stream LogRequest) returns (StreamLogResponse);
+}
+
+message AuditEvent {
+  string id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string event_type = 3;       // access, download, upload, delete, move
+  string subject_id = 4;
+  string subject_role = 5;
+  string resource_path = 6;
+  string resource_sensitivity = 7;
+  string environment_ip = 8;
+  bool allowed = 9;
+  string reason = 10;
+  string result = 11;          // success, failure
+  map<string, string> details = 12;
+}
+
+message LogRequest {
+  AuditEvent event = 1;
+}
+
+message LogResponse {
+  bool success = 1;
+  string event_id = 2;
+}
+
+message QueryRequest {
+  string subject_id = 1;
+  string resource_path = 2;
+  string event_type = 3;
+  google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp end_time = 5;
+  int32 limit = 6;
+  int32 offset = 7;
+}
+
+message QueryResponse {
+  repeated AuditEvent events = 1;
+  int32 total = 2;
+}
+
+message StreamLogResponse {
+  int32 received = 1;
+}

@@ -1,0 +1,52 @@
+# FileGuard 本地开发/演示编排
+# 启动: docker-compose up -d
+# 停止: docker-compose down
+
+version: "3.9"
+
+services:
+  # ---- 密钥管理服务 ----
+  kms:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    command: ["kms", "-config", "configs/kms.yaml"]
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./configs:/app/configs:ro
+      - kms_data:/app/data/kms
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ---- 零信任网关 ----
+  gateway:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    command: ["gateway", "-config", "configs/gateway.yaml"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./fonts:/app/fonts:ro
+      - gateway_data:/app/data
+      - gateway_logs:/app/logs
+    depends_on:
+      kms:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  kms_data:
+  gateway_data:
+  gateway_logs:

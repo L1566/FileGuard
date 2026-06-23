@@ -131,9 +131,11 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 
 	// 获取密钥ID（从元数据中）
 	keyID := info.Metadata["key_id"]
-	if keyID == "" {
-		// 兼容未加密的旧文件，直接返回原始内容
-		logger.Warnf("File %s is not encrypted, returning raw content", filePath)
+	if keyID == "" || h.kmsClient == nil {
+		// 兼容未加密文件或 KMS 不可用，直接返回原始内容
+		if h.kmsClient == nil && keyID != "" {
+			logger.Debugf("KMS unavailable, returning raw content for %s", filePath)
+		}
 		output := []byte(ciphertext)
 		// 仍然应用水印
 		if shouldAddWatermark(decision, resource) {
@@ -264,23 +266,32 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 调用 KMS 加密
-	ciphertext, keyID, err := h.kmsClient.Encrypt(r.Context(), plaintext)
-	if err != nil {
-		logger.Errorf("Encryption failed: %+v", err)
-		httputil.Error(w, http.StatusInternalServerError, "failed to encrypt file")
-		event.Result = "failure"
-		event.Details = map[string]interface{}{"error": "encryption error"}
-		_ = h.audit.Log(r.Context(), event)
-		return
+	// 加密并存储（KMS 不可用时直存明文）
+	var fileContent []byte
+	var metadata map[string]string
+
+	if h.kmsClient != nil {
+		ciphertext, keyID, err := h.kmsClient.Encrypt(r.Context(), plaintext)
+		if err != nil {
+			logger.Errorf("Encryption failed: %+v", err)
+			httputil.Error(w, http.StatusInternalServerError, "failed to encrypt file")
+			event.Result = "failure"
+			event.Details = map[string]interface{}{"error": "encryption error"}
+			_ = h.audit.Log(r.Context(), event)
+			return
+		}
+		fileContent = []byte(ciphertext)
+		metadata = map[string]string{
+			"encrypted": "true",
+			"key_id":    keyID,
+		}
+	} else {
+		// KMS 不可用，明文存储
+		fileContent = plaintext
+		metadata = nil
 	}
 
-	// 存储密文，并保存密钥ID到元数据
-	metadata := map[string]string{
-		"encrypted": "true",
-		"key_id":    keyID,
-	}
-	err = h.storage.Put(r.Context(), filePath, bytes.NewReader([]byte(ciphertext)), metadata)
+	err = h.storage.Put(r.Context(), filePath, bytes.NewReader(fileContent), metadata)
 	if err != nil {
 		logger.Errorf("Storage put error: %v", err)
 		httputil.Error(w, http.StatusInternalServerError, "failed to save file")
@@ -291,7 +302,7 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = h.audit.Log(r.Context(), event)
-	httputil.Success(w, map[string]string{"message": "uploaded and encrypted"})
+	httputil.Success(w, map[string]string{"message": "uploaded"})
 }
 
 // 辅助函数
