@@ -114,6 +114,7 @@ func NewProvider(name, model, endpoint string) (Provider, error) {
 
 // parseEvaluationJSON 解析 LLM 返回的 JSON 文本为 EvaluateResponse，
 // 钳位 risk_score 到 [0, 1]，解析失败时返回安全默认值。
+// 自动处理 LLM 常见的 JSON 包裹格式（markdown 代码块、前后空白）。
 func parseEvaluationJSON(text []byte) *EvaluateResponse {
 	result := &EvaluateResponse{
 		RiskScore:      0.1,
@@ -121,8 +122,10 @@ func parseEvaluationJSON(text []byte) *EvaluateResponse {
 		Recommendation: "allow",
 		Reason:         "default (LLM parse fallback)",
 	}
-	if err := json.Unmarshal(text, result); err != nil {
-		logger.Warnf("Failed to parse LLM JSON response, using defaults: %v", err)
+
+	cleaned := extractJSON(text)
+	if err := json.Unmarshal(cleaned, result); err != nil {
+		logger.Warnf("Failed to parse LLM JSON response, using defaults: %v\n  raw (first 200 chars): %.200s", err, string(text))
 		return result
 	}
 	if result.RiskScore < 0 {
@@ -132,4 +135,34 @@ func parseEvaluationJSON(text []byte) *EvaluateResponse {
 		result.RiskScore = 1.0
 	}
 	return result
+}
+
+// extractJSON 从 LLM 响应文本中提取 JSON 片段。
+// 处理常见情况：markdown 代码块包裹、前后多余文本/空白。
+func extractJSON(raw []byte) []byte {
+	s := strings.TrimSpace(string(raw))
+
+	// 情况 1: ```json ... ``` 或 ``` ... ```
+	if idx := strings.Index(s, "```"); idx >= 0 {
+		start := strings.Index(s[idx:], "\n")
+		if start < 0 {
+			start = 3
+		} else {
+			start = idx + start + 1
+		}
+		end := strings.Index(s[start:], "```")
+		if end >= 0 {
+			return []byte(strings.TrimSpace(s[start : start+end]))
+		}
+		return []byte(strings.TrimSpace(s[start:]))
+	}
+
+	// 情况 2: 找到第一个 { 到最后一个 }
+	start := strings.Index(s, "{")
+	end := strings.LastIndex(s, "}")
+	if start >= 0 && end > start {
+		return []byte(s[start : end+1])
+	}
+
+	return []byte(s)
 }
