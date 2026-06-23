@@ -96,9 +96,10 @@ type RiskServiceConfig struct {
 }
 
 type LLMSettings struct {
-	Provider   string        `mapstructure:"provider"`
-	Model      string        `mapstructure:"model"`
-	APIKeyEnv  string        `mapstructure:"api_key_env"`
+	Provider   string        `mapstructure:"provider"`    // anthropic | openai | deepseek | google | groq
+	Model      string        `mapstructure:"model"`       // 模型名称
+	Endpoint   string        `mapstructure:"endpoint"`    // 可选：留空使用内置默认，填写则覆盖
+	APIKeyEnv  string        `mapstructure:"api_key_env"` // API Key 环境变量名
 	Timeout    time.Duration `mapstructure:"timeout"`
 	MaxRetries int           `mapstructure:"max_retries"`
 }

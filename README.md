@@ -154,24 +154,18 @@ docker-compose up -d
 
 ```bash
 # 登录获取 JWT Token
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "alice", "password": "password123"}'
+curl -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" -d '{"username": "alice", "password": "password123"}'
 
 # 响应
 # {"success": true, "data": {"token": "eyJhbGciOi..."}}
 
 # 设置 MFA（双因素认证）
 TOKEN="<从登录响应获取的token>"
-curl -X POST http://localhost:8080/api/auth/setup-mfa \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8080/api/auth/setup-mfa -H "Authorization: Bearer $TOKEN"
 # 返回 secret 和 qrcode_url，用 Google Authenticator 扫描
 
 # 验证并启用 MFA
-curl -X POST http://localhost:8080/api/auth/verify-mfa \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"passcode": "123456"}'
+curl -X POST http://localhost:8080/api/auth/verify-mfa -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"passcode": "123456"}'
 ```
 
 **测试账户：**

@@ -2,7 +2,6 @@ package risk
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"text/template"
 )
@@ -31,7 +30,7 @@ var userPromptTmpl = template.Must(template.New("user").Parse(`{
 
 请返回 JSON: {"risk_score": <0.0-1.0>, "risk_level": "<low|medium|high|critical>", "factors": {"time_anomaly": ..., "location_anomaly": ..., "behavior_volume": ..., "content_sensitivity": ...}, "recommendation": "<allow|mfa|approval|deny>", "reason": "<简短中文解释>"}`))
 
-// BuildPrompt 构造 LLM 请求的 system + user messages
+// BuildPrompt 构造 LLM 请求的 system + user messages（Provider 无关）
 func BuildPrompt(req *EvaluateRequest) (system, user string, err error) {
 	var buf bytes.Buffer
 	if err := userPromptTmpl.Execute(&buf, req); err != nil {
@@ -40,20 +39,3 @@ func BuildPrompt(req *EvaluateRequest) (system, user string, err error) {
 	return systemPrompt, buf.String(), nil
 }
 
-// BuildLLMRequest 构造发给 Claude API 的完整请求体
-func BuildLLMRequest(req *EvaluateRequest, model string) ([]byte, error) {
-	sys, usr, err := BuildPrompt(req)
-	if err != nil {
-		return nil, err
-	}
-	body := map[string]interface{}{
-		"model":       model,
-		"max_tokens":  256,
-		"temperature": 0.0,
-		"system":      sys,
-		"messages": []map[string]string{
-			{"role": "user", "content": usr},
-		},
-	}
-	return json.Marshal(body)
-}

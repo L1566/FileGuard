@@ -26,7 +26,13 @@ func main() {
 	}
 	logger.Init(cfg.Log.Level, cfg.Log.Format)
 
+	provider, err := risk.NewProvider(cfg.LLM.Provider, cfg.LLM.Model, cfg.LLM.Endpoint)
+	if err != nil {
+		logger.Fatal("Failed to create LLM provider: ", err)
+	}
+
 	scorer, err := risk.NewScorer(risk.ScorerConfig{
+		Provider:   provider,
 		Model:      cfg.LLM.Model,
 		APIKeyEnv:  cfg.LLM.APIKeyEnv,
 		Timeout:    cfg.LLM.Timeout,
