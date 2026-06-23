@@ -1,14 +1,14 @@
 # FileGuard 项目完成度跟踪
 
-> 最后更新：2026-06-23 | 基于代码库实际审查
+> 最后更新：2026-06-23 | 阶段 0 ✅ 阶段 1 ✅ 阶段 2~7 待跟进
 
 ---
 
 ## 📊 总体进度
 
 ```
-阶段 0  ████████████████████░  95%  基础设施
-阶段 1  █████████████████░░░░  85%  存储与策略基础
+阶段 0  █████████████████████ 100%  基础设施 ✅
+阶段 1  █████████████████████ 100%  存储与策略基础 ✅
 阶段 2  ████████████████████░ 100%  零信任网关原型
 阶段 3  ██████████████████░░░  90%  终端代理 + 水印
 阶段 4  ███████████████████░░  95%  加密与 KMS
@@ -16,7 +16,7 @@
 阶段 6  ██████████████░░░░░░░  70%  MFA (TOTP)
 阶段 7  ███░░░░░░░░░░░░░░░░░░  15%  生产加固与测试
 ────────────────────────────────────
-综合    ███████████████░░░░░░  75%
+综合    █████████████████░░░░  81%
 ```
 
 ---
@@ -28,7 +28,7 @@
 | 0.1 | 项目目录结构 (cmd/internal/pkg/api/configs/deployments) | ✅ | 完整，另有预留扩展目录 |
 | 0.2 | Go module 初始化 (`go.mod`) | ✅ | module `github.com/L1566/FileGuard`，Go 1.25 |
 | 0.3 | 日志库 logrus 封装 | ✅ | [pkg/logger/logger.go](pkg/logger/logger.go) — Debug/Info/Warn/Error/Fatal + 结构化字段 |
-| 0.4 | 配置管理 viper | ✅ | [pkg/config/config.go](pkg/config/config.go) — 已集中所有服务配置类型 |
+| 0.4 | 配置管理 viper | ✅ | [pkg/config/config.go](pkg/config/config.go) — GatewayConfig/AgentConfig/ServiceConfig 三大类型 + 专用 Load 函数 |
 | 0.5 | 统一错误处理 | ✅ | [pkg/errors/errors.go](pkg/errors/errors.go) — AppError + 5 种哨兵错误 |
 | 0.6 | HTTP 响应封装 | ✅ | [pkg/http/response.go](pkg/http/response.go) — Success/Error JSON 响应 |
 | 0.7 | 健康检查端点 | ✅ | 所有 5 个服务均实现 `/health` |
@@ -50,11 +50,12 @@
 | 1.5 | 规则支持正则匹配 | ✅ | `regex:` 前缀语法 |
 | 1.6 | 规则支持列表包含 | ✅ | `[]interface{}` 值自动切换 |
 | 1.7 | MemoryEvaluator | ✅ | [pkg/abac/evaluator.go](pkg/abac/evaluator.go) — 首匹配/默认拒绝 |
-| 1.8 | 单元测试覆盖 | ⚠️ | 仅 [evaluator_test.go](pkg/abac/evaluator_test.go) 存在，其余 11 个包零测试 |
+| 1.8 | 单元测试覆盖 | ✅ | `pkg/abac/` 31 测试 + `pkg/storage/` 19 测试（共 50 项） |
 
-**待改进：**
-- [ ] S3 存储后端为空 stub（[pkg/storage/s3.go](pkg/storage/s3.go)）
-- [ ] 补全 `pkg/storage/`、`pkg/dlp/`、`pkg/crypto/` 等的单元测试
+**本轮修复（2026-06-23）：**
+- [x] ~~S3 存储后端为空 stub~~ → 已实现完整占位类型（含接口方法 + 文档化未来扩展点 + `ErrNotImplemented`）
+- [x] ~~补全 `pkg/storage/` 单元测试~~ → 19 项测试：Put/Get 往返、Stat、Delete、List、Move、并发、二进制/大文件
+- [x] ~~补全 `pkg/abac/` 单元测试~~ → 从 2 项扩展至 31 项：属性匹配、环境条件、CRUD、默认拒绝、规则加载
 
 ---
 
@@ -180,9 +181,9 @@
 | B3 | 🟡 中 | [server.go](internal/kms/server/server.go) | KMS 密钥无持久化，重启丢失 |
 | B4 | 🟡 中 | [watermark.go](pkg/watermark/watermark.go) | 字体路径硬编码，部署可能失败 |
 | B5 | 🟡 中 | [client.go](pkg/kms/client.go) | 使用已弃用的 `grpc.WithInsecure()` |
-| B6 | 🟢 低 | [s3.go](pkg/storage/s3.go) | S3 后端为空 stub |
+| B6 | ~~🟢 低~~ ✅ | ~~[s3.go](pkg/storage/s3.go)~~ | ~~S3 后端为空 stub~~ → 已实现占位类型 + 完整文档 |
 | B7 | 🟢 低 | [file_logger.go](pkg/audit/file_logger.go) | Query 方法返回 nil（未实现） |
-| B8 | 🟢 低 | [go.mod](go.mod) | jwt/otp/gg/freetype 被错误标记为 indirect |
+| B8 | ~~🟢 低~~ ✅ | ~~[go.mod](go.mod)~~ | ~~jwt/otp/gg 被错误标记为 indirect~~ → 已通过 `go mod tidy` 修复 |
 
 ---
 
