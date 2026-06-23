@@ -6,9 +6,33 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"sync"
 
 	"github.com/fogleman/gg"
+	"github.com/L1566/FileGuard/pkg/logger"
 )
+
+// 默认水印字体路径（可通过 SetFontPath 覆盖）
+var (
+	fontPath   = "./fonts/1_Minecraft-Regular.otf"
+	fontPathMu sync.RWMutex
+)
+
+// SetFontPath 设置水印字体文件路径（线程安全）
+func SetFontPath(path string) {
+	fontPathMu.Lock()
+	defer fontPathMu.Unlock()
+	if path != "" {
+		fontPath = path
+	}
+}
+
+// GetFontPath 获取当前水印字体路径
+func GetFontPath() string {
+	fontPathMu.RLock()
+	defer fontPathMu.RUnlock()
+	return fontPath
+}
 
 // AddTextWatermark 为图片添加文本水印，返回新的图片字节流
 // 支持格式：PNG, JPEG
@@ -26,12 +50,15 @@ func AddTextWatermark(reader io.Reader, text string, outputFormat string) ([]byt
 	if fontSize < 12 {
 		fontSize = 12
 	}
-	dc.SetRGBA(0.5, 0.5, 0.5, 0.5) // 灰色
+	dc.SetRGBA(0.5, 0.5, 0.5, 0.5) // 灰色半透明
 
-	if err := dc.LoadFontFace("./fonts/1_Minecraft-Regular.otf", fontSize); err != nil {
-		// 使用默认字体
+	currentFont := GetFontPath()
+	if err := dc.LoadFontFace(currentFont, fontSize); err != nil {
+		logger.Warnf("Failed to load watermark font '%s': %v — falling back to default font", currentFont, err)
+		// 使用默认字体，调整颜色以提高可读性
 		dc.SetRGBA(0, 0, 0, 0.5)
 	}
+
 	// 计算水印位置（右下角）
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -52,7 +79,6 @@ func AddTextWatermark(reader io.Reader, text string, outputFormat string) ([]byt
 }
 
 // AddTextWatermarkSimple 通用文本水印（返回带水印的文本，用于非图片文件，可选）
-// 这里只做简单封装，实际可根据需要扩展
 func AddTextWatermarkSimple(content []byte, watermark string) []byte {
 	// 简单示例：在文件开头插入水印注释（仅适用于文本文件）
 	prefix := []byte("# Watermark: " + watermark + "\n")

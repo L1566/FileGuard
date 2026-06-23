@@ -1,6 +1,6 @@
 # FileGuard 项目完成度跟踪
 
-> 最后更新：2026-06-23 | 阶段 0 ✅ 阶段 1 ✅ 阶段 2 ✅（无需修复） 阶段 3~7 待跟进
+> 最后更新：2026-06-23 | 阶段 0 ✅ 阶段 1 ✅ 阶段 2 ✅ 阶段 3 ✅ 阶段 4~7 待跟进
 
 ---
 
@@ -10,13 +10,13 @@
 阶段 0  █████████████████████ 100%  基础设施 ✅
 阶段 1  █████████████████████ 100%  存储与策略基础 ✅
 阶段 2  ████████████████████░ 100%  零信任网关原型
-阶段 3  ██████████████████░░░  90%  终端代理 + 水印
+阶段 3  █████████████████████ 100%  终端代理 + 水印 ✅
 阶段 4  ███████████████████░░  95%  加密与 KMS
 阶段 5  ████████████████████░ 100%  DLP 与动态策略
 阶段 6  ██████████████░░░░░░░  70%  MFA (TOTP)
 阶段 7  ███░░░░░░░░░░░░░░░░░░  15%  生产加固与测试
 ────────────────────────────────────
-综合    █████████████████░░░░  81%
+综合    ██████████████████░░░  85%
 ```
 
 ---
@@ -84,9 +84,10 @@
 | 3.5 | 文本文件水印 | ✅ | `AddTextWatermarkSimple` — 注释前缀 |
 | 3.6 | 网关集成水印 | ✅ | 根据策略 Restrictions 自动应用 |
 
-**待改进：**
-- [ ] 水印字体路径硬编码 `./fonts/1_Minecraft-Regular.otf`，应改为配置项
-- [ ] 字体加载失败时静默回退，应打印警告
+**本轮修复（2026-06-23）：**
+- [x] ~~水印字体路径硬编码~~ → `GatewayConfig.Watermark.FontPath` 配置化 + `watermark.SetFontPath()` 运行时设置
+- [x] ~~字体加载失败静默回退~~ → 改用 `logger.Warnf` 打印字体路径和错误详情
+- [x] ~~GatewayConfig 缺少水印配置节点~~ → 新增 `WatermarkSettings` + `gateway.yaml` 增加 `watermark.font_path`
 
 ---
 
@@ -179,7 +180,7 @@
 | B1 | 🔴 高 | [auth.go:79](internal/gateway/handler/auth.go#L79) | Context key 类型不匹配 → SetupMFA/VerifyMFA 永远失败 |
 | B2 | 🟡 中 | [user_store.go](internal/auth/user_store.go) | 密码明文存储（标注为演示用） |
 | B3 | 🟡 中 | [server.go](internal/kms/server/server.go) | KMS 密钥无持久化，重启丢失 |
-| B4 | 🟡 中 | [watermark.go](pkg/watermark/watermark.go) | 字体路径硬编码，部署可能失败 |
+| B4 | ~~🟡 中~~ ✅ | ~~[watermark.go](pkg/watermark/watermark.go)~~ | ~~字体路径硬编码~~ → 已配置化 + 失败 warning 日志 |
 | B5 | 🟡 中 | [client.go](pkg/kms/client.go) | 使用已弃用的 `grpc.WithInsecure()` |
 | B6 | ~~🟢 低~~ ✅ | ~~[s3.go](pkg/storage/s3.go)~~ | ~~S3 后端为空 stub~~ → 已实现占位类型 + 完整文档 |
 | B7 | 🟢 低 | [file_logger.go](pkg/audit/file_logger.go) | Query 方法返回 nil（未实现） |

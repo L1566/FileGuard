@@ -56,6 +56,11 @@ type DLPSettings struct {
 	RulesFile string `mapstructure:"rules_file"`
 }
 
+// WatermarkSettings 水印设置
+type WatermarkSettings struct {
+	FontPath string `mapstructure:"font_path"` // 水印字体文件路径
+}
+
 // MonitorSettings 文件监控设置（agent 使用）
 type MonitorSettings struct {
 	RootDir string `mapstructure:"root_dir"`
@@ -85,8 +90,9 @@ type GatewayConfig struct {
 	Storage StorageSettings `mapstructure:"storage"`
 	Policy  PolicySettings  `mapstructure:"policy"`
 	Audit   AuditSettings   `mapstructure:"audit"`
-	KMS     KMSSettings     `mapstructure:"kms"`
-	DLP     DLPSettings     `mapstructure:"dlp"`
+	KMS       KMSSettings       `mapstructure:"kms"`
+	DLP       DLPSettings       `mapstructure:"dlp"`
+	Watermark WatermarkSettings `mapstructure:"watermark"`
 }
 
 // AgentConfig 终端代理配置

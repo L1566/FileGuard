@@ -16,6 +16,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/kms"
 	"github.com/L1566/FileGuard/pkg/logger"
 	"github.com/L1566/FileGuard/pkg/storage"
+	"github.com/L1566/FileGuard/pkg/watermark"
 	"github.com/gorilla/mux"
 )
 
@@ -51,6 +52,9 @@ func main() {
 		logger.Warnf("Failed to load DLP rules: %v", err)
 	}
 	dlpDetector := dlp.NewDetector(dlpRuleSet)
+
+	// 初始化水印字体路径
+	watermark.SetFontPath(cfg.Watermark.FontPath)
 
 	// 初始化 ABAC 评估器
 	rules, err := abac.LoadRulesFromFile(cfg.Policy.RulesFile)

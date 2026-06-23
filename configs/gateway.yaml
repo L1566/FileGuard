@@ -26,3 +26,6 @@ kms:
 
 dlp:
   rules_file: ./configs/dlp_rules.json
+
+watermark:
+  font_path: ./fonts/1_Minecraft-Regular.otf  # 水印字体文件路径
