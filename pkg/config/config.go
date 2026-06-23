@@ -79,12 +79,13 @@ type GatewaySettings struct {
 
 // RiskSettings 风险评分设置（Gateway 侧）
 type RiskSettings struct {
-	Enabled    bool          `mapstructure:"enabled"`
-	Mode       string        `mapstructure:"mode"`        // shadow | monitor | active
-	ServiceURL string        `mapstructure:"service_url"` // e.g. http://localhost:8090
-	CacheTTL   time.Duration `mapstructure:"cache_ttl"`   // e.g. 5m
-	Timeout    time.Duration `mapstructure:"timeout"`     // e.g. 500ms
-	Fallback   string        `mapstructure:"fallback"`    // allow | deny | abac_only
+	Enabled       bool          `mapstructure:"enabled"`
+	Mode          string        `mapstructure:"mode"`          // shadow | monitor | active
+	ServiceURL    string        `mapstructure:"service_url"`   // e.g. http://localhost:8090
+	CacheTTL      time.Duration `mapstructure:"cache_ttl"`     // e.g. 5m
+	Timeout       time.Duration `mapstructure:"timeout"`       // e.g. 500ms
+	Fallback      string        `mapstructure:"fallback"`      // allow | deny | abac_only
+	TrustedCIDRs  []string      `mapstructure:"trusted_cidrs"` // 额外可信 IP 段（除私有 IP 外）
 }
 
 // RiskServiceConfig Risk Service 自身配置

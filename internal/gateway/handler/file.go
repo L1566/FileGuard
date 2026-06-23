@@ -33,6 +33,10 @@ type FileHandler struct {
 	dlpDetector *dlp.Detector
 	riskClient  *risk.Client
 
+	// 数据采集组件（供 RiskContext 填充真实数据）
+	behaviorTracker *risk.BehaviorTracker
+	ipClassifier    *risk.IPClassifier
+
 	// riskMode 渐进上线模式：shadow | monitor | active
 	riskMode string
 	// riskFallback 风险服务不可用时的降级策略：allow | deny | abac_only
@@ -55,8 +59,6 @@ func NewFileHandler(storage storage.Storage, evaluator abac.Evaluator, audit aud
 }
 
 // SetRiskPolicy 配置 AI 风险评分的渐进上线模式与降级策略。
-// mode: shadow | monitor | active；fallback: allow | deny | abac_only。
-// 传入空字符串时保留安全默认值（shadow / allow）。
 func (h *FileHandler) SetRiskPolicy(mode, fallback string) {
 	if mode != "" {
 		h.riskMode = mode
@@ -64,6 +66,12 @@ func (h *FileHandler) SetRiskPolicy(mode, fallback string) {
 	if fallback != "" {
 		h.riskFallback = fallback
 	}
+}
+
+// SetRiskCollectors 注入行为追踪与 IP 分类器，供 evaluateRisk 填充真实数据
+func (h *FileHandler) SetRiskCollectors(tracker *risk.BehaviorTracker, classifier *risk.IPClassifier) {
+	h.behaviorTracker = tracker
+	h.ipClassifier = classifier
 }
 
 // GetFile 处理 GET /file/{path:.*}
@@ -189,6 +197,7 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		if shouldAddWatermark(decision, resource) {
 			output = applyWatermark(output, subject.ID, filePath)
 		}
+		h.recordBehavior(subject.ID, filePath)
 		w.Header().Set("Content-Type", detectContentType(filePath))
 		w.Write(output)
 		_ = h.audit.Log(r.Context(), event)
@@ -246,6 +255,7 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 返回明文
+	h.recordBehavior(subject.ID, filePath)
 	w.Header().Set("Content-Type", detectContentType(filePath))
 	w.Header().Set("X-FileGuard-Allowed", "true")
 	w.Write(output)
@@ -398,6 +408,8 @@ func (h *FileHandler) PutFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.recordBehavior(subject.ID, filePath)
+
 	_ = h.audit.Log(r.Context(), event)
 	httputil.Success(w, map[string]string{"message": "uploaded"})
 }
@@ -424,8 +436,14 @@ func (h *FileHandler) evaluateRisk(ctx context.Context, subject abac.Subject, re
 		},
 		Context: risk.RiskContext{
 			IsWorkHours:     isWorkHours(),
-			IsKnownLocation: false,
+			IsKnownLocation: h.isTrustedLocation(env.IP),
 		},
+	}
+
+	// 填充行为追踪数据
+	if h.behaviorTracker != nil {
+		req.Context.RecentAccessCount1H, req.Context.UniqueFilesAccessed1H =
+			h.behaviorTracker.GetHourlyStats(subject.ID)
 	}
 
 	resp, err := h.riskClient.Evaluate(ctx, req)
@@ -527,6 +545,21 @@ func mergeDetails(event *audit.AuditEvent, kv map[string]interface{}) {
 func isWorkHours() bool {
 	h := time.Now().Hour()
 	return h >= 9 && h < 18
+}
+
+func (h *FileHandler) isTrustedLocation(ip string) bool {
+	if h.ipClassifier == nil {
+		return false
+	}
+	level, _ := h.ipClassifier.Classify(ip)
+	return level == "intranet"
+}
+
+// recordBehavior 文件操作成功后记录到行为追踪器
+func (h *FileHandler) recordBehavior(userID, filePath string) {
+	if h.behaviorTracker != nil {
+		h.behaviorTracker.RecordAccess(userID, filePath)
+	}
 }
 
 // 辅助函数

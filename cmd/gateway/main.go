@@ -108,6 +108,11 @@ func main() {
 		logger.Infof("Risk scoring enabled: mode=%s fallback=%s", cfg.Risk.Mode, cfg.Risk.Fallback)
 	}
 
+	// 初始化行为追踪与 IP 分类（供风险评分的 RiskContext 采集真实数据）
+	behaviorTracker := risk.NewBehaviorTracker()
+	ipClassifier := risk.NewIPClassifier(cfg.Risk.TrustedCIDRs)
+	fileHandler.SetRiskCollectors(behaviorTracker, ipClassifier)
+
 	// ========== 公开路由（无需 JWT） ==========
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
 	r.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")

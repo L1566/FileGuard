@@ -21,6 +21,7 @@ type Scorer struct {
 	model      string
 	apiKey     string
 	provider   Provider
+	ruleScorer *RuleScorer
 	httpClient *http.Client
 	cache      *lru.Cache[string, *EvaluateResponse]
 	ttl        time.Duration
@@ -61,9 +62,10 @@ func NewScorer(cfg ScorerConfig) (*Scorer, error) {
 	}
 
 	return &Scorer{
-		model:    cfg.Model,
-		apiKey:   apiKey,
-		provider: p,
+		model:      cfg.Model,
+		apiKey:     apiKey,
+		provider:   p,
+		ruleScorer: NewRuleScorer(),
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
 		},
@@ -92,7 +94,7 @@ func (s *Scorer) Evaluate(ctx context.Context, req *EvaluateRequest) (*EvaluateR
 			s.mu.Unlock()
 			logger.Errorf("Risk scorer degraded: %d consecutive failures", s.failCount.Load())
 		}
-		return s.defaultResponse(), nil
+		return s.fallbackResponse(req), nil
 	}
 
 	s.failCount.Store(0)
@@ -181,4 +183,32 @@ func (s *Scorer) defaultResponse() *EvaluateResponse {
 		Recommendation: "allow",
 		Reason:         "risk service default (LLM unavailable)",
 	}
+}
+
+// fallbackResponse LLM 不可用时回退到确定性规则评分
+func (s *Scorer) fallbackResponse(req *EvaluateRequest) *EvaluateResponse {
+	resp := s.ruleScorer.Score(ScoreInput{
+		IsWorkHours:   req.Context.IsWorkHours,
+		IsDeepNight:   isDeepNight(),
+		IPRiskLevel:   classifyIPFromContext(req.Environment.IP),
+		DeviceTrust:   "unregistered",
+		HourlyAccess:  req.Context.RecentAccessCount1H,
+		UniqueFiles1H: req.Context.UniqueFilesAccessed1H,
+	})
+	resp.Reason = "[rule fallback] " + resp.Reason
+	return resp
+}
+
+func isDeepNight() bool {
+	h := time.Now().Hour()
+	return h >= 0 && h < 6
+}
+
+func classifyIPFromContext(ip string) string {
+	if ip == "" {
+		return "foreign"
+	}
+	c := NewIPClassifier(nil)
+	level, _ := c.Classify(ip)
+	return level
 }
