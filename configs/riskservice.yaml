@@ -9,8 +9,10 @@ log:
 llm:
   # 支持的提供商: anthropic | openai | deepseek | google | groq
   # deepseek/openai/groq 共用 OpenAI 兼容格式
-  provider: anthropic
-  model: claude-sonnet-4-6
+  #provider: anthropic
+  #model: claude-sonnet-4-6
+  provider: deepseek
+  model: deepseek-v4-pro
   api_key_env: FILEGUARD_LLM_API_KEY
   # endpoint: ""            # 可选：留空使用内置默认，填写则覆盖（如自托管代理）
   timeout: 10s
