@@ -61,6 +61,11 @@ type WatermarkSettings struct {
 	FontPath string `mapstructure:"font_path"` // 水印字体文件路径
 }
 
+// KeyStoreSettings KMS 密钥存储设置
+type KeyStoreSettings struct {
+	File string `mapstructure:"file"` // 密钥持久化文件路径
+}
+
 // MonitorSettings 文件监控设置（agent 使用）
 type MonitorSettings struct {
 	RootDir string `mapstructure:"root_dir"`
@@ -76,10 +81,17 @@ type GatewaySettings struct {
 // 各服务完整配置类型
 // =============================================================================
 
-// ServiceConfig 基础服务配置（适用于 audit / policy / kms 等简单服务）
+// ServiceConfig 基础服务配置（适用于 audit / policy 等简单服务）
 type ServiceConfig struct {
 	Service ServiceSettings `mapstructure:"service"`
 	Log     LogSettings     `mapstructure:"log"`
+}
+
+// KMSConfig KMS 密钥管理服务配置
+type KMSConfig struct {
+	Service  ServiceSettings  `mapstructure:"service"`
+	Log      LogSettings      `mapstructure:"log"`
+	KeyStore KeyStoreSettings `mapstructure:"key_store"`
 }
 
 // GatewayConfig 零信任网关配置
@@ -128,6 +140,19 @@ func Load(configFile string) (*ServiceConfig, error) {
 		return nil, err
 	}
 	var cfg ServiceConfig
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// LoadKMS 加载 KMS 配置
+func LoadKMS(configFile string) (*KMSConfig, error) {
+	v, err := newViper(configFile)
+	if err != nil {
+		return nil, err
+	}
+	var cfg KMSConfig
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}

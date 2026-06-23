@@ -1,6 +1,6 @@
 # FileGuard 项目完成度跟踪
 
-> 最后更新：2026-06-23 | 阶段 0 ✅ 阶段 1 ✅ 阶段 2 ✅ 阶段 3 ✅ 阶段 4~7 待跟进
+> 最后更新：2026-06-23 | 阶段 0 ✅ 阶段 1 ✅ 阶段 2 ✅ 阶段 3 ✅ 阶段 4 ✅ 阶段 5~7 待跟进
 
 ---
 
@@ -11,12 +11,12 @@
 阶段 1  █████████████████████ 100%  存储与策略基础 ✅
 阶段 2  ████████████████████░ 100%  零信任网关原型
 阶段 3  █████████████████████ 100%  终端代理 + 水印 ✅
-阶段 4  ███████████████████░░  95%  加密与 KMS
+阶段 4  █████████████████████ 100%  加密与 KMS ✅
 阶段 5  ████████████████████░ 100%  DLP 与动态策略
 阶段 6  ██████████████░░░░░░░  70%  MFA (TOTP)
 阶段 7  ███░░░░░░░░░░░░░░░░░░  15%  生产加固与测试
 ────────────────────────────────────
-综合    ██████████████████░░░  85%
+综合    ██████████████████░░░  86%
 ```
 
 ---
@@ -106,10 +106,11 @@
 | 4.9 | 密钥 ID 存于文件元数据 | ✅ | `metadata["key_id"]` → `.meta` 文件 |
 | 4.10 | 兼容未加密旧文件 | ✅ | key_id 为空时跳过解密 |
 
-**待改进：**
-- [ ] 密钥仅存于内存 map，KMS 重启全部丢失
-- [ ] `grpc.WithInsecure()` 已弃用，迁移至 `insecure.NewCredentials()`
-- [ ] `pkg/kms/client.go` 未暴露 RotateKey/RevokeKey
+**本轮修复（2026-06-23）：**
+- [x] ~~密钥仅存于内存 map~~ → JSON 文件持久化（`key_store.file`），启动自动加载，变更自动保存
+- [x] ~~`grpc.WithInsecure()` 已弃用~~ → 迁移至 `grpc.NewClient` + `insecure.NewCredentials()`
+- [x] ~~client.go 未暴露 RotateKey/RevokeKey~~ → 新增 `Client.RotateKey()` / `Client.RevokeKey()` 方法
+- [x] ~~KMS 无专用配置类型~~ → 新增 `KMSConfig` + `LoadKMS()` + `configs/kms.yaml` 增加 `key_store.file`
 
 ---
 
@@ -179,9 +180,9 @@
 |---|:------:|------|----------|
 | B1 | 🔴 高 | [auth.go:79](internal/gateway/handler/auth.go#L79) | Context key 类型不匹配 → SetupMFA/VerifyMFA 永远失败 |
 | B2 | 🟡 中 | [user_store.go](internal/auth/user_store.go) | 密码明文存储（标注为演示用） |
-| B3 | 🟡 中 | [server.go](internal/kms/server/server.go) | KMS 密钥无持久化，重启丢失 |
+| B3 | ~~🟡 中~~ ✅ | ~~[server.go](internal/kms/server/server.go)~~ | ~~密钥无持久化~~ → JSON 文件持久化 + 启动加载 |
 | B4 | ~~🟡 中~~ ✅ | ~~[watermark.go](pkg/watermark/watermark.go)~~ | ~~字体路径硬编码~~ → 已配置化 + 失败 warning 日志 |
-| B5 | 🟡 中 | [client.go](pkg/kms/client.go) | 使用已弃用的 `grpc.WithInsecure()` |
+| B5 | ~~🟡 中~~ ✅ | ~~[client.go](pkg/kms/client.go)~~ | ~~弃用 `grpc.WithInsecure()`~~ → `grpc.NewClient` + `insecure.NewCredentials()` |
 | B6 | ~~🟢 低~~ ✅ | ~~[s3.go](pkg/storage/s3.go)~~ | ~~S3 后端为空 stub~~ → 已实现占位类型 + 完整文档 |
 | B7 | 🟢 低 | [file_logger.go](pkg/audit/file_logger.go) | Query 方法返回 nil（未实现） |
 | B8 | ~~🟢 低~~ ✅ | ~~[go.mod](go.mod)~~ | ~~jwt/otp/gg 被错误标记为 indirect~~ → 已通过 `go mod tidy` 修复 |

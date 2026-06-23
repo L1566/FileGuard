@@ -20,7 +20,7 @@ func main() {
 	flag.StringVar(&configPath, "config", "configs/kms.yaml", "config file path")
 	flag.Parse()
 
-	cfg, err := config.Load(configPath)
+	cfg, err := config.LoadKMS(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
 	}
@@ -31,7 +31,7 @@ func main() {
 		logger.Fatal("Failed to listen: ", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterKeyManagementServiceServer(s, server.NewKMSServer())
+	pb.RegisterKeyManagementServiceServer(s, server.NewKMSServer(cfg.KeyStore.File))
 
 	logger.Infof("KMS server listening on port %d", cfg.Service.Port)
 	go func() {

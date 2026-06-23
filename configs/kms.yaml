@@ -5,3 +5,6 @@ service:
 log:
   level: debug
   format: text
+
+key_store:
+  file: ./data/kms/keys.json  # 密钥持久化文件路径
