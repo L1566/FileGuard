@@ -1,5 +1,41 @@
 package risk
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// FlexFactors 灵活解析 LLM 返回的 factors，兼容 bool 和 float64 两种类型。
+// LLM 有时返回 {"time_anomaly": true}，有时返回 {"time_anomaly": 0.7}。
+type FlexFactors map[string]float64
+
+func (f *FlexFactors) UnmarshalJSON(data []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	result := make(map[string]float64, len(raw))
+	for k, v := range raw {
+		switch val := v.(type) {
+		case float64:
+			result[k] = val
+		case bool:
+			if val {
+				result[k] = 1.0
+			} else {
+				result[k] = 0.0
+			}
+		case json.Number:
+			n, _ := val.Float64()
+			result[k] = n
+		default:
+			return fmt.Errorf("factors[%s]: unsupported type %T", k, v)
+		}
+	}
+	*f = result
+	return nil
+}
+
 // EvaluateRequest 风险评分请求
 type EvaluateRequest struct {
 	RequestID   string             `json:"request_id"`
@@ -42,7 +78,7 @@ type EvaluateResponse struct {
 	RequestID      string             `json:"request_id"`
 	RiskScore      float64            `json:"risk_score"`
 	RiskLevel      string             `json:"risk_level"`
-	Factors        map[string]float64 `json:"factors"`
+	Factors        FlexFactors        `json:"factors"`
 	Recommendation string             `json:"recommendation"`
 	Reason         string             `json:"reason"`
 	Cached         bool               `json:"cached"`

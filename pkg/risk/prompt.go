@@ -28,7 +28,7 @@ var userPromptTmpl = template.Must(template.New("user").Parse(`{
   "behavior": {"recent_files_1h": {{.Context.RecentAccessCount1H}}, "unique_files_1h": {{.Context.UniqueFilesAccessed1H}}}
 }
 
-请返回 JSON: {"risk_score": <0.0-1.0>, "risk_level": "<low|medium|high|critical>", "factors": {"time_anomaly": ..., "location_anomaly": ..., "behavior_volume": ..., "content_sensitivity": ...}, "recommendation": "<allow|mfa|approval|deny>", "reason": "<简短中文解释>"}`))
+请返回 JSON: {"risk_score": <0.0-1.0浮点数>, "risk_level": "<low|medium|high|critical>", "factors": {"time_anomaly": <0.0-1.0浮点数>, "location_anomaly": <0.0-1.0浮点数>, "behavior_volume": <0.0-1.0浮点数>, "content_sensitivity": <0.0-1.0浮点数>}, "recommendation": "<allow|mfa|approval|deny>", "reason": "<简短中文解释>"}`))
 
 // BuildPrompt 构造 LLM 请求的 system + user messages（Provider 无关）
 func BuildPrompt(req *EvaluateRequest) (system, user string, err error) {

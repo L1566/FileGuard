@@ -18,13 +18,20 @@ func (p *OpenAICompatibleProvider) Name() string { return p.name }
 func (p *OpenAICompatibleProvider) BuildRequest(systemPrompt, userPrompt, model string) ([]byte, error) {
 	body := map[string]interface{}{
 		"model":       model,
-		"max_tokens":  256,
+		"max_tokens":  1024,
 		"temperature": 0.0,
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt},
 		},
 	}
+
+	// DeepSeek V4 推理模型默认启用 thinking，会消耗 max_tokens 配额导致 JSON 输出被截断。
+	// 风险评分是简单分类任务，显式禁用 thinking。该字段对其他兼容提供商无副作用。
+	if p.name == "deepseek" {
+		body["thinking"] = map[string]string{"type": "disabled"}
+	}
+
 	return json.Marshal(body)
 }
 
