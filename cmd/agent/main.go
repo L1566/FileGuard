@@ -14,37 +14,15 @@ import (
 	"github.com/L1566/FileGuard/pkg/logger"
 )
 
-type AgentConfig struct {
-	Service struct {
-		Name string `mapstructure:"name"`
-	} `mapstructure:"service"`
-	Log struct {
-		Level  string `mapstructure:"level"`
-		Format string `mapstructure:"format"`
-	} `mapstructure:"log"`
-	Monitor struct {
-		RootDir string `mapstructure:"root_dir"`
-	} `mapstructure:"monitor"`
-	Gateway struct {
-		URL       string        `mapstructure:"url"`
-		Heartbeat time.Duration `mapstructure:"heartbeat"`
-	} `mapstructure:"gateway"`
-	ClientID string `mapstructure:"client_id"`
-}
-
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "configs/agent.yaml", "config file path")
 	flag.Parse()
 
 	// 加载配置
-	v, err := config.LoadViper(configPath)
+	cfg, err := config.LoadAgent(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
-	}
-	var cfg AgentConfig
-	if err := v.Unmarshal(&cfg); err != nil {
-		logger.Fatal("Failed to parse config: ", err)
 	}
 
 	// 初始化日志

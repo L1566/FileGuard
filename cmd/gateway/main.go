@@ -4,14 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/L1566/FileGuard/internal/auth"
 	"github.com/L1566/FileGuard/internal/gateway/handler"
 	"github.com/L1566/FileGuard/internal/gateway/middleware"
 	"github.com/L1566/FileGuard/pkg/abac"
 	"github.com/L1566/FileGuard/pkg/audit"
-	pkg_auth "github.com/L1566/FileGuard/pkg/auth"
+	pkgauth "github.com/L1566/FileGuard/pkg/auth"
 	"github.com/L1566/FileGuard/pkg/config"
 	"github.com/L1566/FileGuard/pkg/dlp"
 	"github.com/L1566/FileGuard/pkg/kms"
@@ -20,51 +19,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type GatewayConfig struct {
-	Service struct {
-		Name string `mapstructure:"name"`
-		Port int    `mapstructure:"port"`
-	} `mapstructure:"service"`
-	Log struct {
-		Level  string `mapstructure:"level"`
-		Format string `mapstructure:"format"`
-	} `mapstructure:"log"`
-	Storage struct {
-		Type    string `mapstructure:"type"` // "local"
-		RootDir string `mapstructure:"root_dir"`
-	} `mapstructure:"storage"`
-	Policy struct {
-		RulesFile string `mapstructure:"rules_file"`
-	} `mapstructure:"policy"`
-	Audit struct {
-		LogFile string `mapstructure:"log_file"`
-	} `mapstructure:"audit"`
-	KMS struct {
-		Address string `mapstructure:"address"`
-	} `mapstructure:"kms"`
-	DLP struct {
-		RulesFile string `mapstructure:"rules_file"`
-	} `mapstructure:"dlp"`
-	JWT struct {
-		SecretKey string        `mapstructure:"secret_key"`
-		Issuer    string        `mapstructure:"issuer"`
-		Expiry    time.Duration `mapstructure:"expiry"`
-	} `mapstructure:"jwt"`
-}
-
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "configs/gateway.yaml", "config file path")
 	flag.Parse()
 
 	// 加载配置
-	var cfg GatewayConfig
-	v, err := config.LoadViper(configPath) // 复用之前的 Load，但需扩展
+	cfg, err := config.LoadGateway(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
-	}
-	if err := v.Unmarshal(&cfg); err != nil {
-		logger.Fatal("Failed to parse config: ", err)
 	}
 
 	// 初始化日志
@@ -122,7 +85,7 @@ func main() {
 	defer kmsClient.Close()
 
 	// 初始化JWT
-	jwtMgr := pkg_auth.NewJWTManager(cfg.JWT.SecretKey, cfg.JWT.Issuer, cfg.JWT.Expiry)
+	jwtMgr := pkgauth.NewJWTManager(cfg.JWT.SecretKey, cfg.JWT.Issuer, cfg.JWT.Expiry)
 	userStore := auth.NewUserStore()
 	authHandler := handler.NewAuthHandler(userStore, jwtMgr, cfg.JWT.Issuer)
 

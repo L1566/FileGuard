@@ -15,29 +15,14 @@ import (
 	"google.golang.org/grpc"
 )
 
-type KMSConfig struct {
-	Service struct {
-		Name string `mapstructure:"name"`
-		Port int    `mapstructure:"port"`
-	} `mapstructure:"service"`
-	Log struct {
-		Level  string `mapstructure:"level"`
-		Format string `mapstructure:"format"`
-	} `mapstructure:"log"`
-}
-
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "configs/kms.yaml", "config file path")
 	flag.Parse()
 
-	v, err := config.LoadViper(configPath)
+	cfg, err := config.Load(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
-	}
-	var cfg KMSConfig
-	if err := v.Unmarshal(&cfg); err != nil {
-		logger.Fatal("Failed to parse config: ", err)
 	}
 	logger.Init(cfg.Log.Level, cfg.Log.Format)
 

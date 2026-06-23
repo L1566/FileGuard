@@ -5,6 +5,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/L1566/FileGuard)](https://hub.docker.com/r/L1566/FileGuard)
 
 **FileGuard** 是一个面向企业的文件访问控制与防泄露系统，基于零信任思想，提供细粒度的权限管理、动态加密、行为审计和终端防护能力。  
+
 - **通用性**：适用于制造、金融、研发等任何对敏感文件有保护需求的行业  
 - **示例场景**：以新能源汽车企业为核心演示背景，展示如何防止设计图纸、电池配方、供应链数据等被盗或外泄
 
@@ -176,7 +177,7 @@ AGPL v3。详见 [LICENSE](LICENSE) 文件。
 ## 联系我们
 
 - 提交 Issue：[GitHub Issues](https://github.com/L1566/FileGuard/issues)
-- 邮件：security@fileguard.io
+- 邮件：lichar@foxmail.com
 - 企业支持：提供商业版技术支持与定制开发
 
 **FileGuard - 让每个文件都在掌控之中**
