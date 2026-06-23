@@ -25,5 +25,14 @@
     "sensitivity": "medium",
     "action": "alert",
     "enabled": true
+  },
+  {
+    "id": "dlp_top_secret",
+    "name": "Top Secret Files",
+    "pattern": "TopSecret",
+    "is_regex": false,
+    "sensitivity": "high",
+    "action": "block",
+    "enabled": true
   }
 ]

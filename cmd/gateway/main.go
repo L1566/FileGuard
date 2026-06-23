@@ -102,6 +102,11 @@ func main() {
 
 	// 创建文件处理器
 	fileHandler := handler.NewFileHandler(store, evaluator, auditLogger, kmsClient, dlpDetector, riskClient)
+	// 配置 AI 风险评分的渐进上线模式与降级策略
+	if cfg.Risk.Enabled {
+		fileHandler.SetRiskPolicy(cfg.Risk.Mode, cfg.Risk.Fallback)
+		logger.Infof("Risk scoring enabled: mode=%s fallback=%s", cfg.Risk.Mode, cfg.Risk.Fallback)
+	}
 
 	// ========== 公开路由（无需 JWT） ==========
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")

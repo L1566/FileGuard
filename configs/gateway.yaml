@@ -32,7 +32,7 @@ watermark:
 
 risk:
   enabled: true
-  mode: shadow            # shadow | monitor | active
+  mode: active            # shadow | monitor | active
   service_url: http://localhost:8090
   cache_ttl: 5m
   timeout: 15s
