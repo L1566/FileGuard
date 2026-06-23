@@ -1,6 +1,6 @@
 # FileGuard 项目完成度跟踪
 
-> 最后更新：2026-06-23 | 阶段 0~5 ✅ 阶段 6~7 待跟进
+> 最后更新：2026-06-23 | 阶段 0~6 ✅ 阶段 7 待跟进
 
 ---
 
@@ -13,10 +13,10 @@
 阶段 3  █████████████████████ 100%  终端代理 + 水印 ✅
 阶段 4  █████████████████████ 100%  加密与 KMS ✅
 阶段 5  ████████████████████░ 100%  DLP 与动态策略
-阶段 6  ██████████████░░░░░░░  70%  MFA (TOTP)
+阶段 6  █████████████████████ 100%  MFA (TOTP) ✅
 阶段 7  ███░░░░░░░░░░░░░░░░░░  15%  生产加固与测试
 ────────────────────────────────────
-综合    ██████████████████░░░  86%
+综合    ██████████████████░░░  89%
 ```
 
 ---
@@ -141,15 +141,12 @@
 | 6.4 | TOTP 验证 | ✅ | `ValidateTOTP` |
 | 6.5 | Login（密码 + 可选 TOTP） | ✅ | [auth.go:39](internal/gateway/handler/auth.go#L39) |
 | 6.6 | 用户模拟存储 | ✅ | [internal/auth/user_store.go](internal/auth/user_store.go) |
-| 6.7 | SetupMFA / VerifyMFA | 🔴 | **Context key 类型不匹配** — 见下方 Bug 说明 |
+| 6.7 | SetupMFA / VerifyMFA | ✅ | 已修复 context key + 密码哈希 + TOTP 先验后启 |
 
-**🐛 已知 Bug：** [auth.go:79](internal/gateway/handler/auth.go#L79) 和 [auth.go:110](internal/gateway/handler/auth.go#L110) 使用 `r.Context().Value("claims")`（`string` 类型）读取 JWT claims，但 [jwt_auth.go:15](internal/gateway/middleware/jwt_auth.go#L15) 存储时使用类型化常量 `ClaimsKey contextkeyJwtAuth`。**Go context 的 key 比较包含类型信息**，类型不匹配导致 `SetupMFA` 和 `VerifyMFA` 永远返回 401。
-
-**修复方案：** 将 `r.Context().Value("claims")` 改为 `middleware.GetClaims(r.Context())`
-
-**待改进：**
-- [ ] 密码明文存储（`internal/auth/user_store.go`）
-- [ ] TOTP secret 在首次验证前已保存（应先验证再启用）
+**本轮修复（2026-06-23）：**
+- [x] ~~B1: Context key 类型不匹配~~ → `r.Context().Value("claims")` 改为 `middleware.GetClaims(r.Context())`
+- [x] ~~密码明文存储~~ → bcrypt 哈希存储（`golang.org/x/crypto/bcrypt`），`VerifyPassword()` 安全比较
+- [x] ~~TOTP secret 先保存后验证~~ → `SetTOTPSecret` 不再自动启用 MFA，`VerifyMFA` 验证成功后才调用 `EnableMFA`
 
 ---
 
@@ -178,8 +175,8 @@
 
 | # | 严重度 | 位置 | 问题描述 |
 |---|:------:|------|----------|
-| B1 | 🔴 高 | [auth.go:79](internal/gateway/handler/auth.go#L79) | Context key 类型不匹配 → SetupMFA/VerifyMFA 永远失败 |
-| B2 | 🟡 中 | [user_store.go](internal/auth/user_store.go) | 密码明文存储（标注为演示用） |
+| B1 | ~~🔴 高~~ ✅ | ~~[auth.go:79](internal/gateway/handler/auth.go#L79)~~ | ~~Context key 类型不匹配~~ → 改用 `middleware.GetClaims()` |
+| B2 | ~~🟡 中~~ ✅ | ~~[user_store.go](internal/auth/user_store.go)~~ | ~~密码明文存储~~ → bcrypt 哈希 + `VerifyPassword()` |
 | B3 | ~~🟡 中~~ ✅ | ~~[server.go](internal/kms/server/server.go)~~ | ~~密钥无持久化~~ → JSON 文件持久化 + 启动加载 |
 | B4 | ~~🟡 中~~ ✅ | ~~[watermark.go](pkg/watermark/watermark.go)~~ | ~~字体路径硬编码~~ → 已配置化 + 失败 warning 日志 |
 | B5 | ~~🟡 中~~ ✅ | ~~[client.go](pkg/kms/client.go)~~ | ~~弃用 `grpc.WithInsecure()`~~ → `grpc.NewClient` + `insecure.NewCredentials()` |

@@ -5,11 +5,13 @@ import (
 	"net/http"
 
 	"github.com/L1566/FileGuard/internal/auth"
+	"github.com/L1566/FileGuard/internal/gateway/middleware"
 	pkg_auth "github.com/L1566/FileGuard/pkg/auth"
 	httputil "github.com/L1566/FileGuard/pkg/http"
 	"github.com/L1566/FileGuard/pkg/logger"
 )
 
+// AuthHandler 认证相关请求处理器
 type AuthHandler struct {
 	userStore *auth.UserStore
 	jwtMgr    *pkg_auth.JWTManager
@@ -28,7 +30,7 @@ func NewAuthHandler(userStore *auth.UserStore, jwtMgr *pkg_auth.JWTManager, issu
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Passcode string `json:"passcode"` // TOTP 验证码（MFA启用时必须）
+	Passcode string `json:"passcode"` // TOTP 验证码（MFA 启用时必须）
 }
 
 // LoginResponse 登录响应
@@ -36,6 +38,7 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
+// Login 用户登录：验证密码 + 可选 TOTP → 返回 JWT
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -43,14 +46,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 验证用户名密码
+	// 验证用户名密码（bcrypt）
 	user, ok := h.userStore.GetUser(req.Username)
-	if !ok || user.Password != req.Password {
+	if !ok || !h.userStore.VerifyPassword(req.Username, req.Password) {
 		httputil.Error(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
-	// 如果用户启用了 MFA，必须验证 passcode
+	// 如果用户启用了 MFA，必须验证 TOTP passcode
 	if user.MFAEnabled {
 		if req.Passcode == "" {
 			httputil.Error(w, http.StatusUnauthorized, "MFA code required")
@@ -73,11 +76,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, LoginResponse{Token: token})
 }
 
-// SetupMFA 为用户生成 TOTP 密钥并返回二维码
+// SetupMFA 为用户生成 TOTP 密钥并返回二维码 URL
+// 注意：此时仅保存 secret，不启用 MFA——需调用 VerifyMFA 验证后才启用
 func (h *AuthHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
-	// 从 JWT 中获取用户ID（需要认证）
-	claims, ok := r.Context().Value("claims").(*pkg_auth.JWTClaims)
-	if !ok {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
 		httputil.Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -89,7 +92,7 @@ func (h *AuthHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 保存 secret 到用户存储（实际应要求用户验证后再保存）
+	// 保存 secret 但不启用 MFA（需 VerifyMFA 验证后启用）
 	h.userStore.SetTOTPSecret(claims.UserID, secret)
 
 	httputil.Success(w, map[string]interface{}{
@@ -98,7 +101,7 @@ func (h *AuthHandler) SetupMFA(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// VerifyMFA 验证 MFA 码并启用（可选）
+// VerifyMFA 验证 TOTP 码并启用 MFA
 func (h *AuthHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Passcode string `json:"passcode"`
@@ -107,20 +110,30 @@ func (h *AuthHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, http.StatusBadRequest, "invalid request")
 		return
 	}
-	claims, ok := r.Context().Value("claims").(*pkg_auth.JWTClaims)
-	if !ok {
+
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
 		httputil.Error(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+
 	user, ok := h.userStore.GetUser(claims.UserID)
 	if !ok {
 		httputil.Error(w, http.StatusNotFound, "user not found")
 		return
 	}
+
+	// 验证 TOTP passcode
 	if !pkg_auth.ValidateTOTP(user.TOTPSecret, req.Passcode) {
 		httputil.Error(w, http.StatusBadRequest, "invalid passcode")
 		return
 	}
-	// 已经保存过 secret，这里可以标记为已验证
+
+	// 验证成功后启用 MFA
+	if !h.userStore.EnableMFA(claims.UserID) {
+		httputil.Error(w, http.StatusInternalServerError, "failed to enable MFA")
+		return
+	}
+
 	httputil.Success(w, map[string]string{"status": "MFA enabled"})
 }
