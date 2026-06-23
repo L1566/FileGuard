@@ -41,7 +41,7 @@ var defaultEndpoints = map[string]providerDefaults{
 		KeyPrefix: "sk-",
 	},
 	"deepseek": {
-		Endpoint:  "https://api.deepseek.com/v1/chat/completions",
+		Endpoint:  "https://api.deepseek.com/chat/completions",
 		KeyPrefix: "sk-",
 	},
 	"google": {

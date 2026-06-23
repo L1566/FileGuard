@@ -169,6 +169,8 @@ func (s *Scorer) callLLM(ctx context.Context, req *EvaluateRequest) (*EvaluateRe
 		return nil, fmt.Errorf("read llm response: %w", err)
 	}
 
+	logger.Debugf("LLM raw response (first 500 chars): %.500s", string(bodyBytes))
+
 	return s.provider.ParseResponse(bodyBytes)
 }
 
