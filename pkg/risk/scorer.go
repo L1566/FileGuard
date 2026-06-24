@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,6 +30,7 @@ type Scorer struct {
 	failCount    atomic.Int32
 	mu           sync.RWMutex
 	degraded     bool
+	maxRetries   int // LLM 调用失败后的重试次数
 }
 
 // ScorerConfig 评分器配置
@@ -71,8 +73,9 @@ func NewScorer(cfg ScorerConfig) (*Scorer, error) {
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
 		},
-		cache: cache,
-		ttl:   cfg.CacheTTL,
+		cache:      cache,
+		ttl:        cfg.CacheTTL,
+		maxRetries: cfg.MaxRetries,
 	}, nil
 }
 
@@ -86,9 +89,15 @@ func (s *Scorer) Evaluate(ctx context.Context, req *EvaluateRequest) (*EvaluateR
 		return cached, nil
 	}
 
+	// 降级模式下跳过 LLM 调用，直接使用确定性规则评分
+	if s.IsDegraded() {
+		return s.fallbackResponse(req), nil
+	}
+
 	start := time.Now()
-	resp, err := s.callLLM(ctx, req)
+	resp, err := s.callLLM(req)
 	if err != nil {
+		logger.Warnf("LLM call failed (provider: %s): %v", s.provider.Name(), err)
 		s.failCount.Add(1)
 		if s.failCount.Load() >= 3 {
 			s.mu.Lock()
@@ -129,7 +138,10 @@ func (s *Scorer) cacheKey(req *EvaluateRequest) string {
 	return fmt.Sprintf("%x", h.Sum(nil))[:16]
 }
 
-func (s *Scorer) callLLM(ctx context.Context, req *EvaluateRequest) (*EvaluateResponse, error) {
+// callLLM 调用 LLM 执行风险评分（含重试）。
+// 使用独立的 Background context，不被调用方 HTTP 请求的 deadline 截断——
+// LLM 超时由 httpClient.Timeout 独立控制。
+func (s *Scorer) callLLM(req *EvaluateRequest) (*EvaluateResponse, error) {
 	if s.provider.RequiresAPIKey() && s.apiKey == "" {
 		return s.defaultResponse(), nil
 	}
@@ -144,7 +156,37 @@ func (s *Scorer) callLLM(ctx context.Context, req *EvaluateRequest) (*EvaluateRe
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", s.provider.Endpoint(), bytes.NewReader(body))
+	maxAttempts := s.maxRetries + 1 // maxRetries=2 → 最多 3 次尝试
+	var lastErr error
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		result, err := s.tryLLMCall(body)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+
+		// 不可重试的错误（4xx、解析失败）直接退出
+		if !isRetryable(err) {
+			break
+		}
+
+		// 可重试的错误（网络超时/拒绝、5xx），短暂退避后重试
+		if attempt < maxAttempts-1 {
+			delay := time.Duration(attempt+1) * 500 * time.Millisecond
+			logger.Debugf("LLM retry %d/%d after %v: %v", attempt+1, s.maxRetries, delay, err)
+			time.Sleep(delay)
+		}
+	}
+
+	return nil, fmt.Errorf("llm call failed after %d attempts: %w", maxAttempts, lastErr)
+}
+
+// tryLLMCall 执行单次 LLM HTTP 请求（使用独立 context）
+func (s *Scorer) tryLLMCall(body []byte) (*EvaluateResponse, error) {
+	httpReq, err := http.NewRequestWithContext(
+		context.Background(), "POST", s.provider.Endpoint(), bytes.NewReader(body),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +220,21 @@ func (s *Scorer) callLLM(ctx context.Context, req *EvaluateRequest) (*EvaluateRe
 	logger.Debugf("LLM raw response (first 500 chars): %.500s", string(bodyBytes))
 
 	return s.provider.ParseResponse(bodyBytes)
+}
+
+// isRetryable 判断 LLM 调用错误是否可重试。
+// 网络/传输错误和 HTTP 5xx → 可重试；HTTP 4xx 和解析错误 → 不可重试。
+func isRetryable(err error) bool {
+	s := err.Error()
+	// "llm call:" 前缀 = 网络/传输层错误
+	if strings.Contains(s, "llm call:") {
+		return true
+	}
+	// "llm API error 5" = HTTP 5xx 服务端错误
+	if strings.Contains(s, "llm API error 5") {
+		return true
+	}
+	return false
 }
 
 func (s *Scorer) defaultResponse() *EvaluateResponse {
