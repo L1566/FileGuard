@@ -144,8 +144,8 @@ docker-compose ps
 | Gateway | 8080 | HTTP/HTTPS | ✅ `http.ListenAndServeTLS` |
 | KMS | 50051 | gRPC | ✅ `credentials.NewServerTLSFromFile` |
 | Risk Service | 8090 | HTTP/HTTPS | ✅ `http.ListenAndServeTLS` |
-| Audit | 8082 | gRPC | ✅ (规划中) |
-| Policy | 8081 | gRPC | ✅ (规划中) |
+| Audit | 8082 | gRPC | ⏳ 规划中 |
+| Policy | 8081 | gRPC | ⏳ 规划中 |
 | Agent | — | HTTP/HTTPS | ✅ 客户端 TLS Transport |
 
 ---
@@ -478,6 +478,10 @@ service:
   name: FileGuard-kms
   port: 50051
 
+log:
+  level: debug
+  format: text
+
 key_store:
   file: ./data/kms/keys.json  # 密钥持久化文件
 
@@ -522,7 +526,7 @@ policy:
 ```yaml
 service:
   name: FileGuard-agent
-  port: 8085
+  port: 8085           # Agent 为纯客户端，不监听端口（此字段预留）
 
 client_id: "agent-001"
 
@@ -629,6 +633,7 @@ grpcurl -plaintext localhost:8081 list
 |-----|------|
 | `Log` | 写入审计事件（完整决策链记录） |
 | `Query` | 按时间/主题/资源/类型分页查询审计日志 |
+| `StreamLog` | 流式接收审计事件（高性能场景） |
 
 ### Policy gRPC 服务（`:8081`）
 
@@ -639,6 +644,7 @@ grpcurl -plaintext localhost:8081 list
 | `AddRule` | 添加规则（自动持久化 + 热加载暂停保护） |
 | `UpdateRule` | 更新规则 |
 | `DeleteRule` | 删除规则 |
+| `Watch` | 监听规则变更（流式推送至网关） |
 
 ---
 
@@ -775,7 +781,7 @@ pkg/              # 公共库
   risk/           # AI 风险评分（类型、脱敏、评分引擎、提示词、HTTP 客户端）
   storage/        # 存储接口 + 本地文件系统实现
   watermark/      # 图片/文本水印
-configs/          # 7 个 YAML 配置文件
+configs/          # 6 个 YAML 配置文件 + 2 个 JSON 策略文件
 deployments/      # Docker 多阶段构建 + Kubernetes 部署清单
 scripts/          # build.sh, test.sh, gen_certs.sh
 test/integration/ # 集成测试（10 项 + 2 基准）
