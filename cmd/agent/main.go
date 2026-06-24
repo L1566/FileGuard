@@ -33,6 +33,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to create monitor: ", err)
 	}
+
+	// 确保监控目录存在
+	if err := os.MkdirAll(cfg.Monitor.RootDir, 0755); err != nil {
+		logger.Fatal("Failed to create monitor directory: ", err)
+	}
 	if err := mon.AddPath(cfg.Monitor.RootDir); err != nil {
 		logger.Fatal("Failed to add watch path: ", err)
 	}
