@@ -38,7 +38,9 @@ func NewClient(addr string, tlsCfg *config.TLSSettings) (*Client, error) {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	conn, err := grpc.NewClient(addr, opts...)
+	// passthrough scheme 绕过 gRPC v1.66+ 默认 DNS 解析器，直连 TCP。
+	// 使用 dns 解析器时 localhost 在 Windows 上可能解析异常导致连接永久卡在 CONNECTING。
+	conn, err := grpc.NewClient("passthrough:///"+addr, opts...)
 	if err != nil {
 		return nil, err
 	}
