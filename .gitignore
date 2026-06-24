@@ -48,9 +48,6 @@ configs/*.local.yaml
 hs_err_pid*
 replay_pid*
 
-
-docs/*
-docs/superpowers
 data/kms/
 data/projects/
 
