@@ -51,3 +51,6 @@ func (p *AnthropicProvider) AuthHeader(apiKey string) (string, string) {
 func (p *AnthropicProvider) ExtraHeaders() map[string]string {
 	return map[string]string{"anthropic-version": "2023-06-01"}
 }
+
+// RequiresAPIKey Anthropic API 需要 API Key
+func (p *AnthropicProvider) RequiresAPIKey() bool { return true }

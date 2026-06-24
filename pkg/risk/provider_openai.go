@@ -6,11 +6,12 @@ import (
 )
 
 // OpenAICompatibleProvider 兼容 OpenAI Chat Completions API 格式的提供商
-// 适用于：OpenAI ChatGPT、DeepSeek、Groq 等任何遵循 /v1/chat/completions 的 API
+// 适用于：OpenAI ChatGPT、DeepSeek、Groq、llama.cpp server、Ollama 等任何遵循 /v1/chat/completions 的 API
 type OpenAICompatibleProvider struct {
 	name     string
 	model    string
 	endpoint string
+	noAuth   bool // true 表示本地部署，无需 API Key（llamacpp / ollama）
 }
 
 func (p *OpenAICompatibleProvider) Name() string { return p.name }
@@ -55,7 +56,15 @@ func (p *OpenAICompatibleProvider) ParseResponse(body []byte) (*EvaluateResponse
 func (p *OpenAICompatibleProvider) Endpoint() string { return p.endpoint }
 
 func (p *OpenAICompatibleProvider) AuthHeader(apiKey string) (string, string) {
+	if p.noAuth {
+		return "", ""
+	}
 	return "Authorization", "Bearer " + apiKey
 }
 
 func (p *OpenAICompatibleProvider) ExtraHeaders() map[string]string { return nil }
+
+// RequiresAPIKey 本地部署（llamacpp / ollama）不需要 API Key
+func (p *OpenAICompatibleProvider) RequiresAPIKey() bool {
+	return !p.noAuth
+}

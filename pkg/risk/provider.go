@@ -20,6 +20,7 @@ type Provider interface {
 	Endpoint() string
 	AuthHeader(apiKey string) (key, value string)
 	ExtraHeaders() map[string]string
+	RequiresAPIKey() bool // 是否需要 API Key（本地部署返回 false）
 }
 
 // =============================================================================
@@ -51,6 +52,14 @@ var defaultEndpoints = map[string]providerDefaults{
 	"groq": {
 		Endpoint:  "https://api.groq.com/openai/v1/chat/completions",
 		KeyPrefix: "gsk_",
+	},
+	"llamacpp": {
+		Endpoint:  "http://127.0.0.1:8080/v1/chat/completions",
+		KeyPrefix: "",
+	},
+	"ollama": {
+		Endpoint:  "http://127.0.0.1:11434/v1/chat/completions",
+		KeyPrefix: "",
 	},
 }
 
@@ -93,6 +102,14 @@ func NewProvider(name, model, endpoint string) (Provider, error) {
 			name:     name,
 			model:    model,
 			endpoint: ep,
+		}, nil
+
+	case "llamacpp", "ollama":
+		return &OpenAICompatibleProvider{
+			name:     name,
+			model:    model,
+			endpoint: ep,
+			noAuth:   true,
 		}, nil
 
 	case "google":

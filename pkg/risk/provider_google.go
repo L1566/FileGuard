@@ -63,3 +63,6 @@ func (p *GoogleProvider) AuthHeader(apiKey string) (string, string) {
 }
 
 func (p *GoogleProvider) ExtraHeaders() map[string]string { return nil }
+
+// RequiresAPIKey Google Gemini API 需要 API Key
+func (p *GoogleProvider) RequiresAPIKey() bool { return true }

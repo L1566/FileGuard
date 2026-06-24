@@ -1,0 +1,322 @@
+[
+  {
+    "id": "case_01",
+    "name": "工作时间·内网·公司设备·正常频率",
+    "desc": "工程师周二上午10点通过公司内网访问项目文件，最近1小时访问5个文件。完全正常的工作行为。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "intranet",
+      "device_trust": "corporate",
+      "hourly_access": 5,
+      "unique_files_1h": 3
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_02",
+    "name": "晚间加班·内网·公司设备·低频率",
+    "desc": "工程师晚上20点在公司加班，通过内网偶尔访问文件。非工作时间但仍在公司。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": false,
+      "ip_risk_level": "intranet",
+      "device_trust": "corporate",
+      "hourly_access": 3,
+      "unique_files_1h": 2
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_03",
+    "name": "工作时间·内网·个人设备·正常频率",
+    "desc": "员工工作时间携带个人笔记本接入内网，访问频率正常。设备信任度降低但其他因素正常。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "intranet",
+      "device_trust": "personal",
+      "hourly_access": 8,
+      "unique_files_1h": 5
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_04",
+    "name": "工作时间·国内异地·公司设备·正常频率",
+    "desc": "员工出差到国内另一城市，工作时间使用公司笔记本访问文件。IP非内网但仍在国内。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "domestic",
+      "device_trust": "corporate",
+      "hourly_access": 6,
+      "unique_files_1h": 4
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_05",
+    "name": "工作时间·境外IP·公司设备·正常频率",
+    "desc": "员工海外出差，工作时间使用公司笔记本访问文件。境外IP拉高评分但其他因素正常。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "foreign",
+      "device_trust": "corporate",
+      "hourly_access": 4,
+      "unique_files_1h": 3
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_06",
+    "name": "晚间·国内IP·个人设备·中等频率",
+    "desc": "员工晚上21点在家用个人电脑远程访问，IP为国内家庭宽带，访问量中等。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": false,
+      "ip_risk_level": "domestic",
+      "device_trust": "personal",
+      "hourly_access": 12,
+      "unique_files_1h": 8
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_07",
+    "name": "晚间·境外IP·个人设备·低频率",
+    "desc": "员工晚上22点从境外用个人电脑访问，访问量不大但多重因素叠加。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": false,
+      "ip_risk_level": "foreign",
+      "device_trust": "personal",
+      "hourly_access": 3,
+      "unique_files_1h": 2
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_08",
+    "name": "凌晨·内网·公司设备·低频率",
+    "desc": "员工凌晨2点在公司内网访问文件（可能是值班），访问量低。时间异常但环境可信。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "intranet",
+      "device_trust": "corporate",
+      "hourly_access": 2,
+      "unique_files_1h": 1
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_09",
+    "name": "凌晨·国内IP·个人设备·低频率",
+    "desc": "员工凌晨3点从家里用个人电脑访问，访问量不大。时间和设备双重异常。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "domestic",
+      "device_trust": "personal",
+      "hourly_access": 4,
+      "unique_files_1h": 3
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_10",
+    "name": "凌晨·境外IP·个人设备·中等频率",
+    "desc": "用户凌晨4点从境外用个人电脑访问，访问了15个文件。时间+IP+设备三重异常。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "foreign",
+      "device_trust": "personal",
+      "hourly_access": 15,
+      "unique_files_1h": 10
+    },
+    "expected_level": "high",
+    "expected_action": "deny",
+    "expected_score_range": [71, 100]
+  },
+  {
+    "id": "case_11",
+    "name": "凌晨·境外IP·未注册设备·低频率",
+    "desc": "用户凌晨3点从境外未知设备访问，虽然访问量低但环境极度可疑。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "foreign",
+      "device_trust": "unregistered",
+      "hourly_access": 2,
+      "unique_files_1h": 2
+    },
+    "expected_level": "high",
+    "expected_action": "deny",
+    "expected_score_range": [71, 100]
+  },
+  {
+    "id": "case_12",
+    "name": "工作时间·境外IP·未注册设备·大量访问",
+    "desc": "用户工作时间从境外未注册设备大量访问文件（1小时50次），疑似数据批量导出。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "foreign",
+      "device_trust": "unregistered",
+      "hourly_access": 50,
+      "unique_files_1h": 30
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_13",
+    "name": "凌晨·境外·未注册设备·批量导出",
+    "desc": "凌晨2点境外未注册设备，1小时内访问120个不同文件。全部维度拉满的极端场景。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "foreign",
+      "device_trust": "unregistered",
+      "hourly_access": 120,
+      "unique_files_1h": 80
+    },
+    "expected_level": "high",
+    "expected_action": "deny",
+    "expected_score_range": [71, 100]
+  },
+  {
+    "id": "case_14",
+    "name": "工作时间·内网·公司设备·批量导出",
+    "desc": "员工工作时间从内网公司设备批量导出100+文件。行为量异常但环境完全可信（可能是正常备份）。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "intranet",
+      "device_trust": "corporate",
+      "hourly_access": 110,
+      "unique_files_1h": 90
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_15",
+    "name": "晚间·境外IP·公司设备·大量访问",
+    "desc": "员工晚间从境外用公司电脑大量访问文件。IP异常+非工作时间+行为量异常。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": false,
+      "ip_risk_level": "foreign",
+      "device_trust": "corporate",
+      "hourly_access": 80,
+      "unique_files_1h": 50
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_16",
+    "name": "晚间·内网·未注册设备·正常频率",
+    "desc": "员工晚上用一台未注册的新设备从内网访问，访问量正常。设备是主要可疑因素。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": false,
+      "ip_risk_level": "intranet",
+      "device_trust": "unregistered",
+      "hourly_access": 3,
+      "unique_files_1h": 2
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_17",
+    "name": "工作时间·内网·未注册设备·正常频率",
+    "desc": "员工工作时间用一台新设备从内网访问，访问量正常。仅设备异常。",
+    "input": {
+      "is_work_hours": true,
+      "is_deep_night": false,
+      "ip_risk_level": "intranet",
+      "device_trust": "unregistered",
+      "hourly_access": 5,
+      "unique_files_1h": 3
+    },
+    "expected_level": "low",
+    "expected_action": "allow",
+    "expected_score_range": [0, 30]
+  },
+  {
+    "id": "case_18",
+    "name": "晚间·国内IP·未注册设备·大量访问",
+    "desc": "员工晚上从国内未注册设备大量访问文件。非工作时间+未知设备+行为量异常叠加。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": false,
+      "ip_risk_level": "domestic",
+      "device_trust": "unregistered",
+      "hourly_access": 95,
+      "unique_files_1h": 60
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_19",
+    "name": "凌晨·国内IP·公司设备·大量访问",
+    "desc": "凌晨1点从国内IP用公司电脑批量访问，但访问量极大。时间+行为量双重异常。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "domestic",
+      "device_trust": "corporate",
+      "hourly_access": 150,
+      "unique_files_1h": 100
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  },
+  {
+    "id": "case_20",
+    "name": "凌晨·境外·个人设备·边界访问量",
+    "desc": "凌晨2点境外个人设备，访问量接近阈值（9次/小时）。边界场景测试分段逻辑稳定性。",
+    "input": {
+      "is_work_hours": false,
+      "is_deep_night": true,
+      "ip_risk_level": "foreign",
+      "device_trust": "personal",
+      "hourly_access": 9,
+      "unique_files_1h": 7
+    },
+    "expected_level": "medium",
+    "expected_action": "mfa",
+    "expected_score_range": [31, 70]
+  }
+]

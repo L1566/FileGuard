@@ -130,7 +130,7 @@ func (s *Scorer) cacheKey(req *EvaluateRequest) string {
 }
 
 func (s *Scorer) callLLM(ctx context.Context, req *EvaluateRequest) (*EvaluateResponse, error) {
-	if s.apiKey == "" {
+	if s.provider.RequiresAPIKey() && s.apiKey == "" {
 		return s.defaultResponse(), nil
 	}
 
@@ -151,7 +151,9 @@ func (s *Scorer) callLLM(ctx context.Context, req *EvaluateRequest) (*EvaluateRe
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	key, value := s.provider.AuthHeader(s.apiKey)
-	httpReq.Header.Set(key, value)
+	if key != "" {
+		httpReq.Header.Set(key, value)
+	}
 
 	for k, v := range s.provider.ExtraHeaders() {
 		httpReq.Header.Set(k, v)
