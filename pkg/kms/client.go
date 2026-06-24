@@ -43,20 +43,30 @@ func NewClient(addr string, tlsCfg *config.TLSSettings) (*Client, error) {
 		return nil, err
 	}
 
-	// 验证连接可用性：等待连接就绪或超时
+	// 验证连接可用性：轮询 GetState() 直至 Ready 或超时
 	conn.Connect()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	state := conn.GetState()
-	for state != connectivity.Ready {
-		if !conn.WaitForStateChange(ctx, state) {
-			conn.Close()
-			return nil, fmt.Errorf("KMS gRPC connect to %s: timed out", addr)
+	deadline := time.Now().Add(5 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	var lastState connectivity.State
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			break
 		}
-		state = conn.GetState()
 		if state == connectivity.TransientFailure || state == connectivity.Shutdown {
 			conn.Close()
 			return nil, fmt.Errorf("KMS gRPC connect to %s: %s", addr, state.String())
+		}
+		lastState = state
+
+		select {
+		case <-ticker.C:
+			if time.Now().After(deadline) {
+				conn.Close()
+				return nil, fmt.Errorf("KMS gRPC connect to %s: timed out after 5s (last state: %s)", addr, lastState.String())
+			}
 		}
 	}
 
