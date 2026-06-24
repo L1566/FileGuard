@@ -35,7 +35,7 @@ COPY --from=builder /bin/gateway /bin/kms /bin/agent /bin/riskservice /bin/audit
 COPY --from=builder /src/configs /app/configs
 COPY --from=builder /src/fonts /app/fonts
 
-RUN mkdir -p /app/data /app/logs && chown -R fileguard:fileguard /app
+RUN mkdir -p /app/data/monitor /app/data/kms /app/logs && chown -R fileguard:fileguard /app
 
 USER fileguard
 WORKDIR /app
