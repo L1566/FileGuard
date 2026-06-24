@@ -50,8 +50,8 @@ replay_pid*
 
 
 docs/*
+docs/superpowers/
 data/kms/
-data/superpowers
 data/projects/
 
 .superpowers
