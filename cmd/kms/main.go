@@ -14,6 +14,8 @@ import (
 	"github.com/L1566/FileGuard/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func main() {
@@ -44,6 +46,11 @@ func main() {
 
 	s := grpc.NewServer(grpcOpts...)
 	pb.RegisterKeyManagementServiceServer(s, server.NewKMSServer(cfg.KeyStore.File))
+
+	// 注册标准 gRPC Health Check 服务（供 docker-compose grpc_health_probe 使用）
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(s, healthServer)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	logger.Infof("KMS server listening on port %d", cfg.Service.Port)
 	go func() {

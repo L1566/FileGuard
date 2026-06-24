@@ -2,8 +2,6 @@
 # 启动: docker-compose up -d
 # 停止: docker-compose down
 
-version: "3.9"
-
 services:
   # ---- 密钥管理服务 ----
   kms:
