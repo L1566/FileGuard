@@ -3,5 +3,8 @@ service:
   port: 8081
 
 log:
-  level: info   # debug, info, warn, error
-  format: text  # text or json
+  level: info
+  format: text
+
+policy:
+  rules_file: ./configs/rules.json

@@ -42,6 +42,7 @@ func main() {
 		GatewayURL:   cfg.Gateway.URL,
 		HeartbeatInt: cfg.Gateway.Heartbeat,
 		ClientID:     cfg.ClientID,
+		TLSConfig:    &cfg.Gateway.TLS,
 	}, mon.Events())
 
 	ctx, cancel := context.WithCancel(context.Background())

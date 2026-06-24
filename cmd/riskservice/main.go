@@ -53,7 +53,14 @@ func main() {
 	logger.Infof("Starting Risk Service on %s", addr)
 
 	go func() {
-		if err := http.ListenAndServe(addr, r); err != nil {
+		var err error
+		if cfg.TLS.Enabled {
+			logger.Info("Risk Service TLS enabled")
+			err = http.ListenAndServeTLS(addr, cfg.TLS.CertFile, cfg.TLS.KeyFile, r)
+		} else {
+			err = http.ListenAndServe(addr, r)
+		}
+		if err != nil {
 			logger.Fatal("Server failed: ", err)
 		}
 	}()

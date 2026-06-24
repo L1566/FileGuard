@@ -65,10 +65,13 @@ func main() {
 	}
 	evaluator := abac.NewMemoryEvaluator(rules)
 
-	// 启动规则热加载
-	if err := abac.WatchRuleFile(evaluator, cfg.Policy.RulesFile); err != nil {
-		logger.Warnf("Failed to start rule watcher: %v", err)
-	}
+		// 启动规则热加载
+		ruleWatcher, err := abac.WatchRuleFile(evaluator, cfg.Policy.RulesFile)
+		if err != nil {
+			logger.Warnf("Failed to start rule watcher: %v", err)
+		} else {
+			defer ruleWatcher.Close()
+		}
 
 	// 初始化审计日志
 	auditLogger, err := audit.NewFileLogger(cfg.Audit.LogFile)
@@ -83,7 +86,7 @@ func main() {
 	r.Use(middleware.AuthMiddleware)
 
 	// 初始化 KMS 客户端
-	kmsClient, err := kms.NewClient(cfg.KMS.Address)
+	kmsClient, err := kms.NewClient(cfg.KMS.Address, &cfg.KMS.TLS)
 	if err != nil {
 		logger.Fatal("Failed to connect to KMS: ", err)
 	}
@@ -92,7 +95,7 @@ func main() {
 	// 初始化 Risk 客户端
 	var riskClient *risk.Client
 	if cfg.Risk.Enabled {
-		riskClient = risk.NewClient(cfg.Risk.ServiceURL, cfg.Risk.Timeout)
+		riskClient = risk.NewClient(cfg.Risk.ServiceURL, cfg.Risk.Timeout, &cfg.Risk.TLS)
 	}
 
 	// 初始化JWT
@@ -117,6 +120,11 @@ func main() {
 	r.HandleFunc("/health", handler.HealthCheck).Methods("GET")
 	r.HandleFunc("/api/auth/login", authHandler.Login).Methods("POST")
 
+	// Agent 路由（基础设施端点，不需要用户 JWT）
+	agentHandler := handler.NewAgentHandler(auditLogger)
+	r.HandleFunc("/api/agent/event", agentHandler.Event).Methods("POST")
+	r.HandleFunc("/api/agent/heartbeat", agentHandler.Heartbeat).Methods("POST")
+
 	// ========== 需要 JWT 验证的 API 路由 ==========
 	apiProtected := r.PathPrefix("/api").Subrouter()
 	apiProtected.Use(middleware.JWTAuthMiddleware(jwtMgr))
@@ -125,12 +133,8 @@ func main() {
 	apiProtected.HandleFunc("/auth/setup-mfa", authHandler.SetupMFA).Methods("POST")
 	apiProtected.HandleFunc("/auth/verify-mfa", authHandler.VerifyMFA).Methods("POST")
 
-	// Agent 相关
-	apiProtected.HandleFunc("/agent/event", handler.AgentEventHandler).Methods("POST")
-	apiProtected.HandleFunc("/agent/heartbeat", handler.AgentHeartbeatHandler).Methods("POST")
-
 	// 策略管理 API
-	policyAPI := handler.NewPolicyAPI(evaluator)
+	policyAPI := handler.NewPolicyAPI(evaluator, cfg.Policy.RulesFile, ruleWatcher)
 	apiProtected.HandleFunc("/policy/rules", policyAPI.GetRules).Methods("GET")
 	apiProtected.HandleFunc("/policy/rules", policyAPI.AddRule).Methods("POST")
 	apiProtected.HandleFunc("/policy/rules/{id}", policyAPI.UpdateRule).Methods("PUT")
@@ -144,7 +148,14 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", cfg.Service.Port)
 	logger.Infof("Starting %s on %s", cfg.Service.Name, addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
+
+	if cfg.TLS.Enabled {
+		logger.Info("Gateway TLS enabled")
+		err = http.ListenAndServeTLS(addr, cfg.TLS.CertFile, cfg.TLS.KeyFile, r)
+	} else {
+		err = http.ListenAndServe(addr, r)
+	}
+	if err != nil {
 		logger.Fatal("Server failed: ", err)
 	}
 }

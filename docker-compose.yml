@@ -18,7 +18,7 @@ services:
       - kms_data:/app/data/kms
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      test: ["CMD", "grpc_health_probe", "-addr=localhost:50051"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -46,7 +46,86 @@ services:
       timeout: 3s
       retries: 3
 
+  # ---- AI 风险评分服务 ----
+  riskservice:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    command: ["riskservice", "-config", "configs/riskservice.yaml"]
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./configs:/app/configs:ro
+    environment:
+      - FILEGUARD_LLM_API_KEY=${FILEGUARD_LLM_API_KEY:-}
+    depends_on:
+      kms:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ---- 终端代理（文件监控 + 心跳） ----
+  agent:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    command: ["agent", "-config", "configs/agent.yaml"]
+    volumes:
+      - ./configs:/app/configs:ro
+      - agent_data:/app/data
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---- 审计服务 ----
+  audit:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    command: ["audit", "-config", "configs/audit.yaml"]
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./configs:/app/configs:ro
+      - audit_logs:/app/logs
+    depends_on:
+      kms:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ---- 策略服务 ----
+  policy:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile
+    command: ["policy", "-config", "configs/policy.yaml"]
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./configs:/app/configs:ro
+    depends_on:
+      kms:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
 volumes:
   kms_data:
   gateway_data:
   gateway_logs:
+  agent_data:
+  audit_logs:

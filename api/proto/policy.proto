@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "./;policy";
+option go_package = "github.com/L1566/FileGuard/api/proto/policy";
 package policy;
 
 // PolicyService 策略管理服务

@@ -13,6 +13,7 @@ import (
 	"github.com/L1566/FileGuard/pkg/config"
 	"github.com/L1566/FileGuard/pkg/logger"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func main() {
@@ -30,7 +31,18 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to listen: ", err)
 	}
-	s := grpc.NewServer()
+
+	var grpcOpts []grpc.ServerOption
+	if cfg.TLS.Enabled {
+		creds, err := credentials.NewServerTLSFromFile(cfg.TLS.CertFile, cfg.TLS.KeyFile)
+		if err != nil {
+			logger.Fatal("Failed to load TLS credentials: ", err)
+		}
+		grpcOpts = append(grpcOpts, grpc.Creds(creds))
+		logger.Info("KMS TLS enabled")
+	}
+
+	s := grpc.NewServer(grpcOpts...)
 	pb.RegisterKeyManagementServiceServer(s, server.NewKMSServer(cfg.KeyStore.File))
 
 	logger.Infof("KMS server listening on port %d", cfg.Service.Port)

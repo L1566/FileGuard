@@ -34,7 +34,7 @@ func newRiskHandler(t *testing.T, serviceURL, mode, fallback string) *FileHandle
 
 	var client *risk.Client
 	if serviceURL != "" {
-		client = risk.NewClient(serviceURL, 2*time.Second)
+		client = risk.NewClient(serviceURL, 2*time.Second, nil)
 	}
 	h := NewFileHandler(nil, nil, auditLogger, nil, nil, client)
 	h.SetRiskPolicy(mode, fallback)

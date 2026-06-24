@@ -1,16 +1,19 @@
 service:
   name: FileGuard-agent
-  port: 8084
+  port: 8085
 
 log:
-  level: debug  # info/debug
+  level: info
   format: text
 
+client_id: "agent-001"
+
 monitor:
-  root_dir: /tmp/fileguard_agent  # 要监控的目录
+  root_dir: ./data/monitor
 
 gateway:
   url: http://localhost:8080
   heartbeat: 30s
-
-client_id: agent-hostname-01
+  tls:
+    enabled: false          # 启用以加密 Agent↔Gateway 通信
+    ca_file: ./certs/ca.pem # CA 证书（自签名证书时需要）

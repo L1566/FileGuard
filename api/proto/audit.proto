@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "./;audit";
+option go_package = "github.com/L1566/FileGuard/api/proto/audit";
 package audit;
 
 import "google/protobuf/timestamp.proto";

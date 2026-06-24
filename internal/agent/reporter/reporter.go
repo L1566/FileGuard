@@ -3,11 +3,15 @@ package reporter
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/L1566/FileGuard/internal/agent/monitor"
+	"github.com/L1566/FileGuard/pkg/config"
 	"github.com/L1566/FileGuard/pkg/logger"
 )
 
@@ -15,6 +19,7 @@ type Config struct {
 	GatewayURL   string
 	HeartbeatInt time.Duration
 	ClientID     string
+	TLSConfig    *config.TLSSettings // 可选 TLS 配置
 }
 
 type Reporter struct {
@@ -25,12 +30,25 @@ type Reporter struct {
 }
 
 func NewReporter(cfg Config, events <-chan monitor.FileEvent) *Reporter {
-	return &Reporter{
+	r := &Reporter{
 		cfg:    cfg,
 		client: &http.Client{Timeout: 10 * time.Second},
 		events: events,
 		done:   make(chan struct{}),
 	}
+	if cfg.TLSConfig != nil && cfg.TLSConfig.Enabled {
+		tlsCfg := &tls.Config{}
+		if cfg.TLSConfig.CAFile != "" {
+			caCert, err := os.ReadFile(cfg.TLSConfig.CAFile)
+			if err == nil {
+				caPool := x509.NewCertPool()
+				caPool.AppendCertsFromPEM(caCert)
+				tlsCfg.RootCAs = caPool
+			}
+		}
+		r.client.Transport = &http.Transport{TLSClientConfig: tlsCfg}
+	}
+	return r
 }
 
 func (r *Reporter) Start(ctx context.Context) {

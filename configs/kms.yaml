@@ -8,3 +8,9 @@ log:
 
 key_store:
   file: ./data/kms/keys.json  # 密钥持久化文件路径
+
+# TLS 传输加密（可选，生产环境推荐启用）
+tls:
+  enabled: false               # 启用以加密 gRPC 通信
+  cert_file: ./certs/kms-cert.pem
+  key_file: ./certs/kms-key.pem

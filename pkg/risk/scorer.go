@@ -18,16 +18,17 @@ import (
 
 // Scorer 风险评分引擎
 type Scorer struct {
-	model      string
-	apiKey     string
-	provider   Provider
-	ruleScorer *RuleScorer
-	httpClient *http.Client
-	cache      *lru.Cache[string, *EvaluateResponse]
-	ttl        time.Duration
-	failCount  atomic.Int32
-	mu         sync.RWMutex
-	degraded   bool
+	model        string
+	apiKey       string
+	provider     Provider
+	ruleScorer   *RuleScorer
+	httpClient   *http.Client
+	cache        *lru.Cache[string, *EvaluateResponse]
+	ttl          time.Duration
+	ipClassifier *IPClassifier
+	failCount    atomic.Int32
+	mu           sync.RWMutex
+	degraded     bool
 }
 
 // ScorerConfig 评分器配置
@@ -62,10 +63,11 @@ func NewScorer(cfg ScorerConfig) (*Scorer, error) {
 	}
 
 	return &Scorer{
-		model:      cfg.Model,
-		apiKey:     apiKey,
-		provider:   p,
-		ruleScorer: NewRuleScorer(),
+		model:        cfg.Model,
+		apiKey:       apiKey,
+		provider:     p,
+		ruleScorer:   NewRuleScorer(),
+		ipClassifier: NewIPClassifier(nil),
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
 		},
@@ -187,11 +189,19 @@ func (s *Scorer) defaultResponse() *EvaluateResponse {
 
 // fallbackResponse LLM 不可用时回退到确定性规则评分
 func (s *Scorer) fallbackResponse(req *EvaluateRequest) *EvaluateResponse {
+	ipLevel := "foreign"
+	if s.ipClassifier != nil {
+		ipLevel, _ = s.ipClassifier.Classify(req.Environment.IP)
+	}
+	deviceTrust := "unregistered"
+	if req.Context.IsTrustedDevice {
+		deviceTrust = "corporate"
+	}
 	resp := s.ruleScorer.Score(ScoreInput{
 		IsWorkHours:   req.Context.IsWorkHours,
 		IsDeepNight:   isDeepNight(),
-		IPRiskLevel:   classifyIPFromContext(req.Environment.IP),
-		DeviceTrust:   "unregistered",
+		IPRiskLevel:   ipLevel,
+		DeviceTrust:   deviceTrust,
 		HourlyAccess:  req.Context.RecentAccessCount1H,
 		UniqueFiles1H: req.Context.UniqueFilesAccessed1H,
 	})
@@ -204,11 +214,3 @@ func isDeepNight() bool {
 	return h >= 0 && h < 6
 }
 
-func classifyIPFromContext(ip string) string {
-	if ip == "" {
-		return "foreign"
-	}
-	c := NewIPClassifier(nil)
-	level, _ := c.Classify(ip)
-	return level
-}

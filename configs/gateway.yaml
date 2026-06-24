@@ -2,6 +2,12 @@ service:
   name: FileGuard-gateway
   port: 8080
 
+# Gateway 自身 HTTPS（Agent / 客户端连接使用）
+tls:
+  enabled: false               # 启用以加密 Gateway HTTP 服务
+  cert_file: ./certs/gateway-cert.pem
+  key_file: ./certs/gateway-key.pem
+
 jwt:
   secret_key: "your-256-bit-secret-key-change-in-production"
   issuer: "FileGuard"
@@ -23,6 +29,9 @@ audit:
 
 kms:
   address: localhost:50051
+  tls:
+    enabled: false             # 与 KMS 服务端保持一致
+    ca_file: ./certs/ca.pem    # CA 证书（自签名证书时需要）
 
 dlp:
   rules_file: ./configs/dlp_rules.json
@@ -32,8 +41,10 @@ watermark:
 
 risk:
   enabled: true
-  mode: active            # shadow | monitor | active
+  mode: shadow            # shadow | monitor | active
   service_url: http://localhost:8090
-  cache_ttl: 5m
   timeout: 15s
   fallback: allow         # allow | deny | abac_only
+  tls:
+    enabled: false          # 启用以加密 Gateway↔Risk Service 通信
+    ca_file: ./certs/ca.pem # CA 证书（自签名证书时需要）

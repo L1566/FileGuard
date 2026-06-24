@@ -349,8 +349,7 @@ risk:                 # AI 风险评分（可选）
   enabled: true
   mode: shadow        # shadow | monitor | active
   service_url: http://localhost:8090
-  cache_ttl: 5m
-  timeout: 500ms
+  timeout: 15s
   fallback: allow     # allow | deny | abac_only
 ```
 

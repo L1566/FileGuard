@@ -70,6 +70,7 @@ type RiskContext struct {
 	UniqueFilesAccessed1H int    `json:"unique_files_accessed_1h"`
 	IsWorkHours           bool   `json:"is_work_hours"`
 	IsKnownLocation       bool   `json:"is_known_location"`
+	IsTrustedDevice       bool   `json:"is_trusted_device"`
 	ContentSummary        string `json:"content_summary"`
 }
 

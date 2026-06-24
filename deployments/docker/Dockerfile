@@ -17,14 +17,21 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/gateway ./cmd/gateway
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/kms ./cmd/kms
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/agent ./cmd/agent
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/riskservice ./cmd/riskservice
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/audit ./cmd/audit
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bin/policy ./cmd/policy
 
 # ---- 阶段 2: 运行 ----
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates tzdata && \
+RUN apk add --no-cache ca-certificates tzdata wget && \
+    GRPC_HEALTH_PROBE_VERSION=v0.4.37 && \
+    ARCH=$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/') && \
+    wget -qO /usr/local/bin/grpc_health_probe "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-linux-${ARCH}" && \
+    chmod +x /usr/local/bin/grpc_health_probe && \
     adduser -D -g '' fileguard
 
-COPY --from=builder /bin/gateway /bin/kms /bin/agent /usr/local/bin/
+COPY --from=builder /bin/gateway /bin/kms /bin/agent /bin/riskservice /bin/audit /bin/policy /usr/local/bin/
 COPY --from=builder /src/configs /app/configs
 COPY --from=builder /src/fonts /app/fonts
 

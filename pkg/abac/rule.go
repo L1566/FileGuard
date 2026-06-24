@@ -131,3 +131,12 @@ func LoadRulesFromFile(filePath string) ([]Rule, error) {
 	}
 	return rules, nil
 }
+
+// SaveRulesToFile 将规则列表持久化到 JSON 文件
+func SaveRulesToFile(filePath string, rules []Rule) error {
+	data, err := json.MarshalIndent(rules, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, data, 0644)
+}

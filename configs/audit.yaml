@@ -5,3 +5,6 @@ service:
 log:
   level: info
   format: text
+
+storage:
+  log_file: ./logs/audit.log

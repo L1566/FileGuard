@@ -48,7 +48,16 @@ type AuditSettings struct {
 
 // KMSSettings KMS 连接设置
 type KMSSettings struct {
-	Address string `mapstructure:"address"` // e.g. localhost:50051
+	Address string      `mapstructure:"address"` // e.g. localhost:50051
+	TLS     TLSSettings `mapstructure:"tls"`
+}
+
+// TLSSettings TLS 传输加密设置
+type TLSSettings struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	CertFile string `mapstructure:"cert_file"`
+	KeyFile  string `mapstructure:"key_file"`
+	CAFile   string `mapstructure:"ca_file"` // 可选：自定义 CA（用于自签名证书）
 }
 
 // DLPSettings DLP 规则设置
@@ -75,17 +84,18 @@ type MonitorSettings struct {
 type GatewaySettings struct {
 	URL       string        `mapstructure:"url"`
 	Heartbeat time.Duration `mapstructure:"heartbeat"` // e.g. 30s
+	TLS       TLSSettings   `mapstructure:"tls"`
 }
 
 // RiskSettings 风险评分设置（Gateway 侧）
 type RiskSettings struct {
-	Enabled       bool          `mapstructure:"enabled"`
-	Mode          string        `mapstructure:"mode"`          // shadow | monitor | active
-	ServiceURL    string        `mapstructure:"service_url"`   // e.g. http://localhost:8090
-	CacheTTL      time.Duration `mapstructure:"cache_ttl"`     // e.g. 5m
-	Timeout       time.Duration `mapstructure:"timeout"`       // e.g. 500ms
-	Fallback      string        `mapstructure:"fallback"`      // allow | deny | abac_only
-	TrustedCIDRs  []string      `mapstructure:"trusted_cidrs"` // 额外可信 IP 段（除私有 IP 外）
+	Enabled      bool          `mapstructure:"enabled"`
+	Mode         string        `mapstructure:"mode"`          // shadow | monitor | active
+	ServiceURL   string        `mapstructure:"service_url"`   // e.g. http://localhost:8090
+	Timeout      time.Duration `mapstructure:"timeout"`       // e.g. 15s
+	Fallback     string        `mapstructure:"fallback"`      // allow | deny | abac_only
+	TrustedCIDRs []string      `mapstructure:"trusted_cidrs"` // 额外可信 IP 段（除私有 IP 外）
+	TLS          TLSSettings   `mapstructure:"tls"`
 }
 
 // RiskServiceConfig Risk Service 自身配置
@@ -94,6 +104,7 @@ type RiskServiceConfig struct {
 	Log     LogSettings     `mapstructure:"log"`
 	LLM     LLMSettings     `mapstructure:"llm"`
 	Cache   CacheSettings   `mapstructure:"cache"`
+	TLS     TLSSettings     `mapstructure:"tls"`
 }
 
 type LLMSettings struct {
@@ -125,20 +136,22 @@ type KMSConfig struct {
 	Service  ServiceSettings  `mapstructure:"service"`
 	Log      LogSettings      `mapstructure:"log"`
 	KeyStore KeyStoreSettings `mapstructure:"key_store"`
+	TLS      TLSSettings      `mapstructure:"tls"`
 }
 
 // GatewayConfig 零信任网关配置
 type GatewayConfig struct {
-	Service ServiceSettings `mapstructure:"service"`
-	Log     LogSettings     `mapstructure:"log"`
-	JWT     JWTSettings     `mapstructure:"jwt"`
-	Storage StorageSettings `mapstructure:"storage"`
-	Policy  PolicySettings  `mapstructure:"policy"`
-	Audit   AuditSettings   `mapstructure:"audit"`
+	Service   ServiceSettings   `mapstructure:"service"`
+	Log       LogSettings       `mapstructure:"log"`
+	JWT       JWTSettings       `mapstructure:"jwt"`
+	Storage   StorageSettings   `mapstructure:"storage"`
+	Policy    PolicySettings    `mapstructure:"policy"`
+	Audit     AuditSettings     `mapstructure:"audit"`
 	KMS       KMSSettings       `mapstructure:"kms"`
 	DLP       DLPSettings       `mapstructure:"dlp"`
 	Watermark WatermarkSettings `mapstructure:"watermark"`
-		Risk      RiskSettings      `mapstructure:"risk"`
+	Risk      RiskSettings      `mapstructure:"risk"`
+	TLS       TLSSettings       `mapstructure:"tls"`
 }
 
 // AgentConfig 终端代理配置

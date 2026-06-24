@@ -21,3 +21,8 @@ llm:
 cache:
   max_entries: 10000
   ttl: 5m
+
+tls:
+  enabled: false                     # 启用以加密 Risk Service HTTP 服务
+  cert_file: ./certs/riskservice-cert.pem
+  key_file: ./certs/riskservice-key.pem
