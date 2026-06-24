@@ -51,6 +51,7 @@ replay_pid*
 
 docs/*
 data/kms/
-.superpowers
+data/superpowers
 data/projects/
-files_for_test
+
+.superpowers
