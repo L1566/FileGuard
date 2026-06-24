@@ -17,27 +17,14 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// AuditConfig 审计服务扩展配置
-type AuditConfig struct {
-	Service config.ServiceSettings `mapstructure:"service"`
-	Log     config.LogSettings     `mapstructure:"log"`
-	Storage struct {
-		LogFile string `mapstructure:"log_file"`
-	} `mapstructure:"storage"`
-}
-
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "configs/audit.yaml", "config file path")
 	flag.Parse()
 
-	var cfg AuditConfig
-	v, err := config.LoadViper(configPath)
+	cfg, err := config.LoadAudit(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
-	}
-	if err := v.Unmarshal(&cfg); err != nil {
-		logger.Fatal("Failed to parse config: ", err)
 	}
 	logger.Init(cfg.Log.Level, cfg.Log.Format)
 

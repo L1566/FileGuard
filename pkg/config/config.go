@@ -163,6 +163,24 @@ type AgentConfig struct {
 	ClientID string           `mapstructure:"client_id"`
 }
 
+// AuditConfig 审计服务配置
+type AuditConfig struct {
+	Service ServiceSettings `mapstructure:"service"`
+	Log     LogSettings     `mapstructure:"log"`
+	Storage struct {
+		LogFile string `mapstructure:"log_file"`
+	} `mapstructure:"storage"`
+}
+
+// PolicyConfig 策略服务配置
+type PolicyConfig struct {
+	Service ServiceSettings `mapstructure:"service"`
+	Log     LogSettings     `mapstructure:"log"`
+	Policy  struct {
+		RulesFile string `mapstructure:"rules_file"`
+	} `mapstructure:"policy"`
+}
+
 // =============================================================================
 // 加载函数
 // =============================================================================
@@ -239,6 +257,32 @@ func LoadAgent(configFile string) (*AgentConfig, error) {
 		return nil, err
 	}
 	var cfg AgentConfig
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// LoadAudit 加载审计服务配置
+func LoadAudit(configFile string) (*AuditConfig, error) {
+	v, err := newViper(configFile)
+	if err != nil {
+		return nil, err
+	}
+	var cfg AuditConfig
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// LoadPolicy 加载策略服务配置
+func LoadPolicy(configFile string) (*PolicyConfig, error) {
+	v, err := newViper(configFile)
+	if err != nil {
+		return nil, err
+	}
+	var cfg PolicyConfig
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}

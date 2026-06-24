@@ -17,27 +17,14 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// PolicyConfig 策略服务扩展配置
-type PolicyConfig struct {
-	Service config.ServiceSettings `mapstructure:"service"`
-	Log     config.LogSettings     `mapstructure:"log"`
-	Policy  struct {
-		RulesFile string `mapstructure:"rules_file"`
-	} `mapstructure:"policy"`
-}
-
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "configs/policy.yaml", "config file path")
 	flag.Parse()
 
-	var cfg PolicyConfig
-	v, err := config.LoadViper(configPath)
+	cfg, err := config.LoadPolicy(configPath)
 	if err != nil {
 		logger.Fatal("Failed to load config: ", err)
-	}
-	if err := v.Unmarshal(&cfg); err != nil {
-		logger.Fatal("Failed to parse config: ", err)
 	}
 	logger.Init(cfg.Log.Level, cfg.Log.Format)
 
