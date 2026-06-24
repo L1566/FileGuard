@@ -27,6 +27,9 @@ services:
       context: .
       dockerfile: deployments/docker/Dockerfile
     command: ["gateway", "-config", "configs/gateway.yaml"]
+    environment:
+      - FILEGUARD_KMS_ADDRESS=kms:50051
+      - FILEGUARD_RISK_SERVICE_URL=http://riskservice:8090
     ports:
       - "8080:8080"
     volumes:
@@ -72,6 +75,8 @@ services:
       context: .
       dockerfile: deployments/docker/Dockerfile
     command: ["agent", "-config", "configs/agent.yaml"]
+    environment:
+      - FILEGUARD_GATEWAY_URL=http://gateway:8080
     volumes:
       - ./configs:/app/configs:ro
       - agent_data:/app/data
